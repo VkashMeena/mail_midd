@@ -1,0 +1,19 @@
+<div class="card p-5 text-center my-4 border-dashed">
+  <div class="mb-3">
+    <div class="mx-auto rounded-circle bg-secondary-subtle d-flex align-items-center justify-content-center" style="width: 72px; height: 72px;">
+      <i class="bi {{ empty_icon|default:'bi-inbox' }} fs-1 text-muted"></i>
+    </div>
+  </div>
+  <h5 class="fw-semibold mb-2">{{ empty_title|default:'No items found' }}</h5>
+  <p class="text-muted mx-auto mb-4" style="max-width: 440px;">
+    {{ empty_message|default:'There are no records matching your current filter criteria or view.' }}
+  </p>
+  {% if empty_action_url %}
+    <div>
+      <a href="{{ empty_action_url }}" class="btn btn-primary">
+        {% if empty_action_icon %}<i class="bi {{ empty_action_icon }} me-1"></i>{% endif %}
+        {{ empty_action_label|default:'Take Action' }}
+      </a>
+    </div>
+  {% endif %}
+</div>

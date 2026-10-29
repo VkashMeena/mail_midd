@@ -1,0 +1,825 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex flex-column gap-3">
+  <!-- Header -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <h3 class="fw-bold mb-0">AI Smart Reply Studio</h3>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+          <i class="bi bi-robot me-1"></i>AI Reply Assistant
+        </span>
+        {% if has_send_permission %}
+          <span class="badge bg-success-subtle text-success border border-success-subtle">
+            <i class="bi bi-send-check me-1"></i>Gmail Send Authorized
+          </span>
+        {% elif gmail_account %}
+          <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+            <i class="bi bi-shield-exclamation me-1"></i>Read-Only OAuth (Send Requires Opt-In)
+          </span>
+        {% endif %}
+      </div>
+      <p class="text-muted small mb-0 mt-1">Contextual response drafting with intelligent tone adaptation, static templates, human review, and threaded Gmail dispatch.</p>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <a href="{% url 'reply_templates_manage' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-bookmark-plus me-1"></i> Manage Templates
+      </a>
+      <a href="{% url 'summary_today' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-card-text me-1"></i> Daily Summary
+      </a>
+    </div>
+  </div>
+
+  <!-- Send Permission Notice if Not Granted -->
+  {% if gmail_account and not has_send_permission %}
+    <div class="alert alert-warning border border-warning-subtle d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-0" role="alert">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-shield-lock-fill fs-3 text-warning"></i>
+        <div>
+          <div class="fw-semibold">Gmail Sending Permission Required</div>
+          <small class="text-muted">Your Gmail account currently has read-only access. Grant Gmail sending permission to send replies directly from this app.</small>
+        </div>
+      </div>
+      <a href="{% url 'gmail:authorize_send' %}" class="btn btn-warning btn-sm text-dark fw-semibold flex-shrink-0">
+        <i class="bi bi-key-fill me-1"></i> Grant Gmail Sending Permission
+      </a>
+    </div>
+  {% elif not gmail_account %}
+    <div class="alert alert-info border border-info-subtle d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-0" role="alert">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-google fs-3 text-info"></i>
+        <div>
+          <div class="fw-semibold">Connect Gmail to Dispatch Replies</div>
+          <small class="text-muted">You can draft and edit replies, but sending requires connecting your Gmail account via Google OAuth 2.0.</small>
+        </div>
+      </div>
+      <a href="{% url 'gmail:connect' %}" class="btn btn-primary btn-sm flex-shrink-0">
+        <i class="bi bi-google me-1"></i> Connect Gmail
+      </a>
+    </div>
+  {% endif %}
+
+  <div class="row g-4">
+    <!-- Left Column: Source Email Context & Templates -->
+    <div class="col-12 col-lg-5">
+      <div class="card h-100 p-4 shadow-sm d-flex flex-column gap-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-envelope text-primary"></i> Source Email
+          </h5>
+          {% if selected_email %}
+            <a href="{% url 'emails:detail' selected_email.id %}" class="btn btn-sm btn-outline-secondary" target="_blank">
+              <i class="bi bi-box-arrow-up-right me-1"></i> View Full
+            </a>
+          {% endif %}
+        </div>
+
+        <!-- Email Selector Dropdown -->
+        <div>
+          <label for="replyEmailSelector" class="form-label small fw-semibold">Select Email to Respond To</label>
+          <select id="replyEmailSelector" class="form-select form-select-sm" onchange="if(this.value) window.location.href='/emails/' + this.value + '/reply/';">
+            {% for em in emails %}
+              <option value="{{ em.id }}" {% if selected_email and em.id == selected_email.id %}selected{% endif %}>
+                {{ em.effective_sender_name|default:em.sender_email }} — {{ em.subject|truncatechars:35 }} ({{ em.received_at|date:"M d" }})
+              </option>
+            {% empty %}
+              <option value="">No emails available</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {% if selected_email %}
+          <!-- Source Email Details Box -->
+          <div class="p-3 bg-body-tertiary rounded-3 border">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+              <span class="fw-bold text-dark text-truncate">{{ selected_email.effective_sender_name|default:selected_email.sender_name }}</span>
+              <small class="text-muted">{{ selected_email.received_at|date:"M d, Y h:i A" }}</small>
+            </div>
+            <div class="small text-muted mb-2">&lt;{{ selected_email.sender_email }}&gt;</div>
+            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+              <span class="badge bg-secondary-subtle text-secondary small">{{ selected_email.effective_category }}</span>
+              {% if selected_email.effective_priority == 'High' %}
+                <span class="badge bg-danger-subtle text-danger small">High Priority</span>
+              {% endif %}
+              {% if selected_email.effective_is_important %}
+                <span class="badge bg-warning-subtle text-warning small"><i class="bi bi-star-fill me-1"></i>Important</span>
+              {% endif %}
+            </div>
+            <div class="fw-semibold text-primary small mb-2">Subject: {{ selected_email.subject }}</div>
+            <div class="text-body small lh-base p-2 bg-body rounded border" style="max-height: 180px; overflow-y: auto; white-space: pre-wrap;">{{ selected_email.body_text|default:selected_email.snippet }}</div>
+          </div>
+
+          <!-- AI Intelligence Analysis Insights -->
+          {% if selected_email.analysis %}
+            <div class="p-3 bg-primary-subtle bg-opacity-25 rounded-3 border border-primary-subtle">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="small fw-bold text-primary text-uppercase tracking-wider">
+                  <i class="bi bi-cpu-fill me-1"></i> Groq Intelligence Insights
+                </span>
+                <a href="{% url 'email_analyze' selected_email.id %}" target="_blank" class="small text-decoration-none">Full Analysis &rarr;</a>
+              </div>
+              <div class="small fw-semibold text-dark mb-1">{{ selected_email.analysis.objective }}</div>
+              {% if selected_email.analysis.action_items %}
+                <div class="small text-danger fw-semibold mt-2 mb-1"><i class="bi bi-lightning-charge me-1"></i>Action Required:</div>
+                <ul class="list-unstyled mb-2 small">
+                  {% for act in selected_email.analysis.action_items|slice:":2" %}
+                    <li class="d-flex align-items-start gap-1 text-body">
+                      <i class="bi bi-arrow-right-short text-danger fs-6 lh-1"></i>
+                      <span>{{ act }}</span>
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+              {% if selected_email.analysis.suggested_reply_hooks %}
+                <div class="small text-muted fw-semibold mb-1">Click to inject suggested hook:</div>
+                <div class="d-flex flex-wrap gap-1">
+                  {% for hook in selected_email.analysis.suggested_reply_hooks %}
+                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 hook-pill-btn" data-hook="{{ hook }}" style="font-size: 0.75rem;">
+                      + {{ hook }}
+                    </button>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          {% else %}
+            <div class="p-2 bg-body-tertiary rounded border d-flex align-items-center justify-content-between">
+              <small class="text-muted"><i class="bi bi-cpu me-1"></i>Email not analyzed with AI yet</small>
+              <form method="POST" action="{% url 'email_analyze' selected_email.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.75rem;">
+                  Analyze with Groq
+                </button>
+              </form>
+            </div>
+          {% endif %}
+
+
+          <!-- Static Templates Quick Drawer -->
+          {% if templates %}
+            <div>
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="small fw-semibold text-muted">Insert Quick Template</span>
+                <a href="{% url 'reply_templates_manage' %}" class="small text-decoration-none">+ Add</a>
+              </div>
+              <div class="d-flex flex-wrap gap-2">
+                {% for tmpl in templates %}
+                  <button type="button" class="btn btn-sm btn-outline-secondary insert-template-btn" data-template-id="{{ tmpl.id }}" data-template-name="{{ tmpl.name }}">
+                    <i class="bi bi-file-text me-1"></i>{{ tmpl.name }}
+                  </button>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Previous Drafts / Replies History -->
+          {% if replies %}
+            <div class="mt-auto pt-2 border-top">
+              <span class="small fw-semibold text-muted d-block mb-2">Reply Activity for this Thread</span>
+              <div class="list-group list-group-flush small">
+                {% for rep in replies %}
+                  <div class="list-group-item px-0 py-1 bg-transparent d-flex justify-content-between align-items-center">
+                    <div>
+                      <span class="fw-medium">{% if rep.reply_type == 'AI_GENERATED' %}AI Draft ({{ rep.tone }}){% else %}{{ rep.get_reply_type_display }}{% endif %}</span>
+                      <small class="text-muted d-block">{{ rep.created_at|date:"M d, h:i A" }}</small>
+                    </div>
+                    <span class="badge {% if rep.status == 'SENT' %}bg-success-subtle text-success{% elif rep.status == 'SAVED' %}bg-info-subtle text-info{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                      {{ rep.get_status_display }}
+                    </span>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+        {% else %}
+          <div class="p-4 bg-body-tertiary rounded text-center text-muted small">
+            No email selected. Choose an email from the dropdown or inbox to generate a reply.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Right Column: AI Drafting Studio & Controls -->
+    <div class="col-12 col-lg-7">
+      <div class="card h-100 p-4 shadow-sm d-flex flex-column gap-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-stars text-primary"></i> Response Composer
+          </h5>
+          <span class="badge bg-secondary-subtle text-secondary" id="replyStatusBadge">
+            {% if latest_reply %}{{ latest_reply.get_status_display }}{% else %}New Draft{% endif %}
+          </span>
+        </div>
+
+        {% if selected_email %}
+          <!-- AI Generation Parameters Box -->
+          <div class="p-3 bg-body-tertiary rounded-3 border">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h6 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                <i class="bi bi-robot text-primary"></i> AI Reply Assistant
+              </h6>
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">Groq LPU Inference</span>
+            </div>
+
+            <!-- Quick Persona Presets -->
+            <div class="mb-3">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="small fw-semibold text-secondary text-uppercase tracking-wider">
+                  <i class="bi bi-bookmark-star text-primary me-1"></i> Quick Persona Presets
+                </span>
+                <small class="text-muted">Or pick custom length & tone below</small>
+              </div>
+              <div class="d-flex flex-wrap gap-1" id="formatPresetRow">
+                {% for fmt in predefined_formats %}
+                  <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 format-preset-btn {% if latest_reply and latest_reply.length == fmt.length and latest_reply.tone == fmt.tone %}btn-primary text-white{% endif %}"
+                          data-length="{{ fmt.length }}" data-tone="{{ fmt.tone }}" data-label="{{ fmt.label }}"
+                          style="font-size: 0.78rem;">
+                    {{ fmt.label }}
+                  </button>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- 1. Reply Length Selector -->
+            <div class="mb-3">
+
+              <label class="form-label small fw-semibold text-secondary text-uppercase tracking-wider mb-2 d-flex align-items-center justify-content-between">
+                <span><i class="bi bi-arrows-expand text-primary me-1"></i> Reply Length</span>
+                <small class="text-muted fw-normal">Choose target detail</small>
+              </label>
+              <div class="btn-group w-100" role="group" aria-label="Reply Length">
+                <input type="radio" class="btn-check" name="replyLength" id="len_short" value="Short" {% if latest_reply and latest_reply.length == 'Short' %}checked{% endif %}>
+                <label class="btn btn-outline-primary btn-sm py-2" for="len_short">
+                  <div class="fw-semibold">Short</div>
+                  <small style="font-size: 0.72rem;">1–3 sentences</small>
+                </label>
+
+                <input type="radio" class="btn-check" name="replyLength" id="len_medium" value="Medium" {% if not latest_reply or latest_reply.length == 'Medium' %}checked{% endif %}>
+                <label class="btn btn-outline-primary btn-sm py-2" for="len_medium">
+                  <div class="fw-semibold">Medium</div>
+                  <small style="font-size: 0.72rem;">1–2 paragraphs</small>
+                </label>
+
+                <input type="radio" class="btn-check" name="replyLength" id="len_long" value="Long" {% if latest_reply and latest_reply.length == 'Long' %}checked{% endif %}>
+                <label class="btn btn-outline-primary btn-sm py-2" for="len_long">
+                  <div class="fw-semibold">Long</div>
+                  <small style="font-size: 0.72rem;">Comprehensive</small>
+                </label>
+              </div>
+            </div>
+
+            <!-- 2. Reply Tone Selector -->
+            <div class="mb-3">
+              <label class="form-label small fw-semibold text-secondary text-uppercase tracking-wider mb-2 d-flex align-items-center justify-content-between">
+                <span><i class="bi bi-palette2 text-primary me-1"></i> Reply Tone</span>
+                <small class="text-muted fw-normal">5 Persona Tones</small>
+              </label>
+              <div class="d-flex flex-wrap gap-2" role="group" aria-label="Reply Tone">
+                {% for tone_val, tone_name in tones %}
+                  <div class="flex-grow-1">
+                    <input type="radio" class="btn-check" name="replyTone" id="tone_{{ tone_val|lower }}" value="{{ tone_val }}" {% if not latest_reply and tone_val == 'Professional' %}checked{% elif latest_reply and latest_reply.tone == tone_val %}checked{% endif %}>
+                    <label class="btn btn-outline-secondary btn-sm w-100 py-2" for="tone_{{ tone_val|lower }}">
+                      {{ tone_name }}
+                    </label>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- 3. AI Inference Engine Selector -->
+            <div class="mb-3 p-2 bg-body rounded border d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-cpu text-primary fs-5"></i>
+                <div>
+                  <div class="small fw-semibold">AI Inference Engine</div>
+                  <div class="text-muted" style="font-size: 0.72rem;">Real LLM Generation without Predefined Responses</div>
+                </div>
+              </div>
+              <div class="d-flex align-items-center gap-3">
+                <div class="form-check form-check-inline mb-0">
+                  <input class="form-check-input" type="radio" name="aiProvider" id="providerGroq" value="groq" checked>
+                  <label class="form-check-label small fw-semibold text-primary" for="providerGroq">
+                    Groq LPU <span class="badge bg-success-subtle text-success py-0 px-1">Ultra-Fast</span>
+                  </label>
+                </div>
+                <div class="form-check form-check-inline mb-0">
+                  <input class="form-check-input" type="radio" name="aiProvider" id="providerOpenAI" value="openai">
+                  <label class="form-check-label small" for="providerOpenAI">OpenAI</label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hidden format fields for compatibility -->
+            <input type="hidden" id="selectedFormatLength" value="{% if latest_reply %}{{ latest_reply.length }}{% else %}Medium{% endif %}">
+            <input type="hidden" id="selectedFormatTone" value="{% if latest_reply %}{{ latest_reply.tone }}{% else %}Professional{% endif %}">
+            <input type="hidden" id="selectedFormatLabel" value="{% if latest_reply %}{{ latest_reply.format_label }}{% else %}Medium + Professional{% endif %}">
+
+            <!-- 4. Additional Instruction (Optional) -->
+            <div class="mb-3">
+              <label for="customInstruction" class="form-label small fw-semibold d-block mb-1 text-secondary text-uppercase tracking-wider">
+                Additional Instruction (Optional)
+              </label>
+              <textarea id="customInstruction" class="form-control form-control-sm" rows="2" placeholder="e.g. Confirm availability for Monday 11 AM, thank them for the update, ask for meeting link...">{% if request.GET.instruction %}{{ request.GET.instruction }}{% elif latest_reply and latest_reply.instruction %}{{ latest_reply.instruction }}{% endif %}</textarea>
+            </div>
+
+            <!-- 5. Generate Reply Button -->
+            <div class="d-flex justify-content-between align-items-center">
+              <small class="text-muted" id="genProviderIndicator">Using Groq LPU (GPT-OSS 120B)</small>
+              <button type="button" class="btn btn-primary btn-sm px-4 fw-semibold" id="btnGenerateAI">
+                <i class="bi bi-magic me-1"></i> Generate Reply
+              </button>
+            </div>
+          </div>
+
+
+          <!-- Composer Form -->
+          <form id="replyComposerForm" class="d-flex flex-column flex-grow-1 gap-2">
+            {% csrf_token %}
+            <input type="hidden" id="currentReplyId" value="{% if latest_reply %}{{ latest_reply.id }}{% endif %}">
+
+            <!-- Recipient & Subject Fields -->
+            <div class="row g-2">
+              <div class="col-12 col-md-6">
+                <label class="form-label small fw-semibold mb-0">To:</label>
+                <input type="email" id="replyRecipient" class="form-control form-control-sm bg-body-tertiary" value="{{ selected_email.sender_email }}" readonly>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label small fw-semibold mb-0">Subject:</label>
+                <input type="text" id="replySubject" class="form-control form-control-sm" value="{% if latest_reply %}{{ latest_reply.subject }}{% elif selected_email.subject|lower|slice:':3' == 're:' %}{{ selected_email.subject }}{% else %}Re: {{ selected_email.subject }}{% endif %}">
+              </div>
+            </div>
+
+            <!-- AI Generated Reply Preview Section -->
+            <div class="flex-grow-1 d-flex flex-column mt-2">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                  <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
+                    <i class="bi bi-chat-left-dots text-primary me-1"></i> AI Generated Reply
+                  </h6>
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle" id="previewFormatBadge">
+                    Format: {% if latest_reply %}{{ latest_reply.format_label }}{% else %}Medium + Professional{% endif %}
+                  </span>
+                  <span class="badge bg-secondary-subtle text-secondary" id="previewLengthBadge">
+                    {% if latest_reply %}{{ latest_reply.length }}{% else %}Medium{% endif %}
+                  </span>
+                  <span class="badge bg-info-subtle text-info" id="previewToneBadge">
+                    {% if latest_reply %}{{ latest_reply.tone }}{% else %}Professional{% endif %}
+                  </span>
+                </div>
+                <span class="text-muted small fw-normal" id="charCount">0 chars</span>
+              </div>
+              <textarea id="replyBodyText" class="form-control flex-grow-1 font-monospace" rows="10" placeholder="AI reply preview will appear here. Click [Edit] to customize..." style="font-size: 0.92rem; line-height: 1.6;">{% if latest_reply %}{{ latest_reply.final_text }}{% endif %}</textarea>
+            </div>
+
+            <!-- Action Buttons Toolbar -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-3 border-top mt-auto">
+              <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnEdit">
+                  <i class="bi bi-pencil me-1"></i> Edit
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="btnRegenerateAI">
+                  <i class="bi bi-arrow-clockwise me-1"></i> Regenerate
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSaveDraft">
+                  <i class="bi bi-save me-1"></i> Save Draft
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnCopyText">
+                  <i class="bi bi-clipboard me-1"></i> Copy Reply
+                </button>
+              </div>
+
+              <div>
+                {% if has_send_permission %}
+                  <button type="button" class="btn btn-success btn-sm px-3 fw-semibold" id="btnOpenSendModal">
+                    <i class="bi bi-send-fill me-1"></i> Send via Gmail
+                  </button>
+                {% else %}
+                  <a href="{% url 'gmail:authorize_send' %}" class="btn btn-warning btn-sm px-3 fw-semibold" title="Grant Gmail sending permission to send replies directly">
+                    <i class="bi bi-key-fill me-1"></i> Grant Sending Permission to Send
+                  </a>
+                {% endif %}
+              </div>
+            </div>
+          </form>
+
+        {% else %}
+          <div class="p-5 text-center text-muted">
+            <i class="bi bi-chat-square-dots fs-1 mb-3 d-block text-secondary"></i>
+            <h5>Select an email from your inbox to start drafting</h5>
+            <a href="{% url 'inbox' %}" class="btn btn-primary btn-sm mt-2">Go to Inbox</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Send Confirmation Modal (Strict Human-in-the-loop Guard) -->
+{% if selected_email %}
+<div class="modal fade" id="sendConfirmModal" tabindex="-1" aria-labelledby="sendConfirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold" id="sendConfirmModalLabel">
+          <i class="bi bi-shield-check text-primary me-2"></i>Confirm Email Dispatch
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="mb-3">Are you sure you want to send this reply? Once sent via the Gmail API, it cannot be recalled.</p>
+        <div class="p-3 bg-body-tertiary rounded border small mb-3">
+          <div><strong>To:</strong> <span id="modalTo">{{ selected_email.sender_email }}</span></div>
+          <div><strong>Subject:</strong> <span id="modalSubject"></span></div>
+          <div class="mt-2 text-muted text-truncate"><strong>Snippet:</strong> <span id="modalSnippet"></span></div>
+        </div>
+        <div class="text-danger small">
+          <i class="bi bi-info-circle me-1"></i> Double-send protection is active. This action is recorded in the reply audit log.
+        </div>
+      </div>
+      <div class="modal-footer border-top">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel & Review</button>
+        <button type="button" class="btn btn-success px-4" id="btnConfirmSend">
+          <i class="bi bi-send-fill me-1"></i> Confirm & Send Now
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const emailId = {% if selected_email %}{{ selected_email.id }}{% else %}null{% endif %};
+  if (!emailId) return;
+
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+  // Character counter & Edit Tracking
+  const bodyTextarea = document.getElementById('replyBodyText');
+  const charCount = document.getElementById('charCount');
+  let lastGeneratedText = bodyTextarea ? bodyTextarea.value : '';
+  let hasUserEdited = false;
+
+  function updateCharCount() {
+    if (bodyTextarea && charCount) {
+      charCount.textContent = bodyTextarea.value.length + ' chars';
+    }
+  }
+  if (bodyTextarea) {
+    bodyTextarea.addEventListener('input', function() {
+      updateCharCount();
+      if (bodyTextarea.value !== lastGeneratedText) {
+        hasUserEdited = true;
+      }
+    });
+    updateCharCount();
+  }
+
+  // Predefined Format Card Selection Sync
+  const formatRadios = document.querySelectorAll('input[name="replyFormat"]');
+  formatRadios.forEach(radio => {
+    radio.addEventListener('change', function() {
+      document.querySelectorAll('.reply-format-card').forEach(card => {
+        card.classList.remove('border-primary', 'bg-primary-subtle', 'active-format-card');
+        card.classList.add('bg-body');
+      });
+      const parentCard = this.closest('.reply-format-card');
+      if (parentCard) {
+        parentCard.classList.remove('bg-body');
+        parentCard.classList.add('border-primary', 'bg-primary-subtle', 'active-format-card');
+      }
+
+      const chosenLength = this.dataset.length || 'Medium';
+      const chosenTone = this.dataset.tone || 'Professional';
+      const lenHidden = document.getElementById('selectedFormatLength');
+      if (lenHidden) lenHidden.value = chosenLength;
+      const toneHidden = document.getElementById('selectedFormatTone');
+      if (toneHidden) toneHidden.value = chosenTone;
+      const labelHidden = document.getElementById('selectedFormatLabel');
+      if (labelHidden) labelHidden.value = this.dataset.label || (chosenLength + ' + ' + chosenTone);
+
+      document.querySelectorAll('input[name="replyLength"]').forEach(r => { if (r.value === chosenLength) r.checked = true; });
+      document.querySelectorAll('input[name="replyTone"]').forEach(r => { if (r.value === chosenTone) r.checked = true; });
+    });
+  });
+
+  // Handle Quick Persona Preset Buttons
+  document.querySelectorAll('.format-preset-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const len = this.dataset.length;
+      const tone = this.dataset.tone;
+      document.querySelectorAll('input[name="replyLength"]').forEach(r => { if (r.value === len) r.checked = true; });
+      document.querySelectorAll('input[name="replyTone"]').forEach(r => { if (r.value === tone) r.checked = true; });
+      document.querySelectorAll('.format-preset-btn').forEach(b => {
+        b.classList.remove('btn-primary', 'text-white');
+        b.classList.add('btn-outline-secondary');
+      });
+      this.classList.remove('btn-outline-secondary');
+      this.classList.add('btn-primary', 'text-white');
+    });
+  });
+
+  // Handle AI Inference Provider radio selection
+
+  document.querySelectorAll('input[name="aiProvider"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      const indicator = document.getElementById('genProviderIndicator');
+      if (indicator) {
+        indicator.textContent = this.value === 'groq' ? 'Using Groq LPU (GPT-OSS 120B)' : 'Using OpenAI (GPT-4o-mini)';
+      }
+    });
+  });
+
+  // Handle Suggested Hook click to inject into instruction
+  document.querySelectorAll('.hook-pill-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const hook = this.dataset.hook;
+      const instructionBox = document.getElementById('customInstruction');
+      if (instructionBox) {
+        if (instructionBox.value.trim().length > 0) {
+          instructionBox.value += '; ' + hook;
+        } else {
+          instructionBox.value = hook;
+        }
+        instructionBox.focus();
+      }
+    });
+  });
+
+  // Common Generation Logic for both [Generate Reply] and [Regenerate]
+  async function performReplyGeneration(triggerBtn, isRegenerate = false) {
+    if (isRegenerate && hasUserEdited && bodyTextarea.value.trim().length > 0) {
+      const confirmOverwrite = confirm(
+        "You have customized this draft. Regenerating will replace your edited text with a freshly generated response.\n\nDo you want to continue?"
+      );
+      if (!confirmOverwrite) {
+        return;
+      }
+    }
+
+    const activeLengthInput = document.querySelector('input[name="replyLength"]:checked');
+    const activeToneInput = document.querySelector('input[name="replyTone"]:checked');
+    const activeProviderInput = document.querySelector('input[name="aiProvider"]:checked');
+
+    const selectedLength = activeLengthInput ? activeLengthInput.value : (document.getElementById('selectedFormatLength')?.value || 'Medium');
+    const selectedTone = activeToneInput ? activeToneInput.value : (document.getElementById('selectedFormatTone')?.value || 'Professional');
+    const selectedProvider = activeProviderInput ? activeProviderInput.value : 'groq';
+    const selectedFormatKey = selectedLength.toLowerCase() + '_' + selectedTone.toLowerCase();
+    const selectedLabel = selectedLength + ' + ' + selectedTone;
+    const instruction = document.getElementById('customInstruction')?.value || '';
+
+    const origContent = triggerBtn.innerHTML;
+    triggerBtn.disabled = true;
+    triggerBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generating AI Reply...';
+
+    try {
+      const resp = await fetch(`/emails/${emailId}/reply/generate/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          reply_format: selectedFormatKey,
+          format_key: selectedFormatKey,
+          format: selectedFormatKey,
+          tone: selectedTone,
+          reply_tone: selectedTone,
+          length: selectedLength,
+          reply_length: selectedLength,
+          provider: selectedProvider,
+          provider_name: selectedProvider,
+          instruction: instruction,
+          custom_instruction: instruction
+        })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        bodyTextarea.value = data.final_text || data.generated_text;
+        lastGeneratedText = bodyTextarea.value;
+        hasUserEdited = false;
+        document.getElementById('currentReplyId').value = data.reply_id;
+        if (data.subject) document.getElementById('replySubject').value = data.subject;
+
+        // Update preview badges
+        const formatBadge = document.getElementById('previewFormatBadge');
+        if (formatBadge) formatBadge.textContent = 'Format: ' + (data.format_label || selectedLabel);
+        const lenBadge = document.getElementById('previewLengthBadge');
+        if (lenBadge) lenBadge.textContent = data.reply_length || data.length || selectedLength;
+        const toneBadge = document.getElementById('previewToneBadge');
+        if (toneBadge) toneBadge.textContent = data.reply_tone || data.tone || selectedTone;
+
+        document.getElementById('replyStatusBadge').textContent = 'Generated Draft';
+        updateCharCount();
+      } else {
+        alert('Generation failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Network error generating reply: ' + err);
+    } finally {
+      triggerBtn.disabled = false;
+      triggerBtn.innerHTML = origContent;
+    }
+  }
+
+
+  // Generate Reply Button
+  const btnGenerateAI = document.getElementById('btnGenerateAI');
+  if (btnGenerateAI) {
+    btnGenerateAI.addEventListener('click', function() {
+      performReplyGeneration(btnGenerateAI, false);
+    });
+  }
+
+  // Regenerate Button
+  const btnRegenerateAI = document.getElementById('btnRegenerateAI');
+  if (btnRegenerateAI) {
+    btnRegenerateAI.addEventListener('click', function() {
+      performReplyGeneration(btnRegenerateAI, true);
+    });
+  }
+
+  // Edit Button (Focus and scroll into view)
+  const btnEdit = document.getElementById('btnEdit');
+  if (btnEdit && bodyTextarea) {
+    btnEdit.addEventListener('click', function() {
+      bodyTextarea.focus();
+      bodyTextarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
+
+  // Save Draft
+  const btnSaveDraft = document.getElementById('btnSaveDraft');
+  if (btnSaveDraft) {
+    btnSaveDraft.addEventListener('click', async function() {
+      const replyId = document.getElementById('currentReplyId').value;
+      const editedText = bodyTextarea.value;
+      const subject = document.getElementById('replySubject').value;
+
+      btnSaveDraft.disabled = true;
+      btnSaveDraft.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+      try {
+        const resp = await fetch(`/emails/${emailId}/reply/draft/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({
+            reply_id: replyId || null,
+            edited_text: editedText,
+            subject: subject
+          })
+        });
+        const data = await resp.json();
+        if (data.success) {
+          document.getElementById('currentReplyId').value = data.reply_id;
+          document.getElementById('replyStatusBadge').textContent = 'Saved Draft';
+          btnSaveDraft.innerHTML = '<i class="bi bi-check2 me-1"></i> Saved!';
+          setTimeout(() => {
+            btnSaveDraft.innerHTML = '<i class="bi bi-save me-1"></i> Save Draft';
+            btnSaveDraft.disabled = false;
+          }, 2000);
+        } else {
+          alert('Save failed: ' + (data.error || 'Unknown error'));
+          btnSaveDraft.disabled = false;
+          btnSaveDraft.innerHTML = '<i class="bi bi-save me-1"></i> Save Draft';
+        }
+      } catch (err) {
+        alert('Error saving draft: ' + err);
+        btnSaveDraft.disabled = false;
+        btnSaveDraft.innerHTML = '<i class="bi bi-save me-1"></i> Save Draft';
+      }
+    });
+  }
+
+  // Apply Static Template Buttons
+  document.querySelectorAll('.insert-template-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      const templateId = this.dataset.templateId;
+      try {
+        const resp = await fetch(`/emails/${emailId}/reply/template/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({ template_id: templateId })
+        });
+        const data = await resp.json();
+        if (data.success) {
+          bodyTextarea.value = data.final_text;
+          document.getElementById('currentReplyId').value = data.reply_id;
+          if (data.subject) document.getElementById('replySubject').value = data.subject;
+          document.getElementById('replyStatusBadge').textContent = 'Template Applied';
+          updateCharCount();
+        }
+      } catch (err) {
+        alert('Error applying template: ' + err);
+      }
+    });
+  });
+
+  // Copy Draft to Clipboard
+  const btnCopyText = document.getElementById('btnCopyText');
+  if (btnCopyText) {
+    btnCopyText.addEventListener('click', function() {
+      navigator.clipboard.writeText(bodyTextarea.value).then(() => {
+        btnCopyText.innerHTML = '<i class="bi bi-check2 me-1"></i> Copied!';
+        setTimeout(() => {
+          btnCopyText.innerHTML = '<i class="bi bi-clipboard me-1"></i> Copy';
+        }, 2000);
+      });
+    });
+  }
+
+  // Send Confirmation Modal Wiring
+  const btnOpenSendModal = document.getElementById('btnOpenSendModal');
+  const sendConfirmModalEl = document.getElementById('sendConfirmModal');
+  if (btnOpenSendModal && sendConfirmModalEl) {
+    const modal = new bootstrap.Modal(sendConfirmModalEl);
+    btnOpenSendModal.addEventListener('click', function() {
+      if (!bodyTextarea.value.trim()) {
+        alert('Please draft your reply before sending.');
+        return;
+      }
+      document.getElementById('modalSubject').textContent = document.getElementById('replySubject').value;
+      document.getElementById('modalSnippet').textContent = bodyTextarea.value.substring(0, 100) + '...';
+      modal.show();
+    });
+
+    const btnConfirmSend = document.getElementById('btnConfirmSend');
+    btnConfirmSend.addEventListener('click', async function() {
+      let replyId = document.getElementById('currentReplyId').value;
+      const editedText = bodyTextarea.value;
+      const subject = document.getElementById('replySubject').value;
+
+      btnConfirmSend.disabled = true;
+      btnConfirmSend.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Dispatching...';
+
+      // First ensure draft is saved
+      if (!replyId) {
+        const saveResp = await fetch(`/emails/${emailId}/reply/draft/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({ edited_text: editedText, subject: subject })
+        });
+        const saveData = await saveResp.json();
+        replyId = saveData.reply_id;
+        document.getElementById('currentReplyId').value = replyId;
+      }
+
+      try {
+        const sendResp = await fetch(`/emails/${emailId}/reply/send/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({
+            reply_id: replyId,
+            edited_text: editedText
+          })
+        });
+        const sendData = await sendResp.json();
+        modal.hide();
+
+        if (sendData.success) {
+          document.getElementById('replyStatusBadge').className = 'badge bg-success-subtle text-success';
+          document.getElementById('replyStatusBadge').textContent = 'Sent via Gmail';
+          alert('Reply successfully sent via Gmail!');
+          window.location.reload();
+        } else {
+          if (sendData.code === 'GMAIL_SEND_PERMISSION_REQUIRED' && sendData.grant_url) {
+            if (confirm(sendData.error + '\n\nClick OK to grant Gmail sending permission now.')) {
+              window.location.href = sendData.grant_url;
+              return;
+            }
+          }
+          alert('Failed to send reply: ' + (sendData.error || 'Unknown error'));
+        }
+      } catch (err) {
+        modal.hide();
+        alert('Error dispatching reply: ' + err);
+      } finally {
+        btnConfirmSend.disabled = false;
+        btnConfirmSend.innerHTML = '<i class="bi bi-send-fill me-1"></i> Confirm & Send Now';
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

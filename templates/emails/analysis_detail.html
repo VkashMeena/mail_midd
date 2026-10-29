@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex flex-column gap-3">
+  <!-- Top Navigation -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div class="d-flex align-items-center gap-2">
+      <a href="{% url 'emails:detail' email.id %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Back to Email
+      </a>
+      <a href="{% url 'ai_analyzer' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-grid me-1"></i> Analyzer Hub
+      </a>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <form method="POST" action="{% url 'email_analyze' email.id %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary btn-sm d-flex align-items-center gap-1 shadow-sm">
+          <i class="bi bi-arrow-repeat"></i>
+          <span>Re-analyze with Groq AI</span>
+        </button>
+      </form>
+      <a href="{% url 'email_reply' email.id %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-robot me-1"></i> Draft AI Reply
+      </a>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  {% if messages %}
+    <div>
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Header Card -->
+  <div class="card p-4 shadow-sm border-0 bg-primary text-white">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+          <span class="badge bg-white text-primary fw-semibold"><i class="bi bi-cpu-fill me-1"></i>Groq LPU Intelligence</span>
+          <span class="badge bg-primary-subtle text-white border border-white border-opacity-25">{{ analysis.model_name|default:"llama-3.3-70b-versatile" }}</span>
+          {% if analysis.action_required %}
+            <span class="badge bg-danger text-white"><i class="bi bi-lightning-charge-fill me-1"></i>Action Required</span>
+          {% endif %}
+        </div>
+        <h4 class="fw-bold mb-1 text-white">{{ email.subject }}</h4>
+        <div class="small opacity-75">From: {{ email.effective_sender_name|default:email.sender_name }} &lt;{{ email.sender_email }}&gt; &bull; {{ email.received_at|date:"M d, Y h:i A" }}</div>
+      </div>
+    </div>
+  </div>
+
+  {% if analysis %}
+    <!-- Analysis Breakdown Grid -->
+    <div class="row g-3">
+      <!-- Left: Core Intelligence & Action Items -->
+      <div class="col-12 col-lg-8">
+        <div class="d-flex flex-column gap-3">
+          <!-- Objective & Reason Card -->
+          <div class="card p-4 shadow-sm">
+            <h6 class="fw-bold text-uppercase text-secondary small tracking-wider mb-2">
+              <i class="bi bi-bullseye text-primary me-1"></i> Primary Objective & Intent
+            </h6>
+            <div class="p-3 bg-body-tertiary rounded border mb-3">
+              <p class="fs-6 fw-medium text-body mb-0">{{ analysis.objective|default:"Objective not identified." }}</p>
+            </div>
+
+            {% if analysis.reason %}
+              <div class="small text-muted mb-1 fw-semibold">Classification Justification:</div>
+              <p class="small text-body mb-0">{{ analysis.reason }}</p>
+            {% endif %}
+          </div>
+
+          <!-- Key Takeaways & Action Items Row -->
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <div class="card p-3 shadow-sm h-100">
+                <h6 class="fw-bold small text-secondary text-uppercase tracking-wider mb-3">
+                  <i class="bi bi-check2-circle text-success me-1"></i> Key Takeaways
+                </h6>
+                {% if analysis.key_points %}
+                  <ul class="list-unstyled mb-0 d-flex flex-column gap-2 small">
+                    {% for pt in analysis.key_points %}
+                      <li class="d-flex align-items-start gap-2">
+                        <i class="bi bi-arrow-right-short text-primary fs-5 lh-1 flex-shrink-0"></i>
+                        <span>{{ pt }}</span>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="small text-muted mb-0">No specific points extracted.</p>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <div class="card p-3 shadow-sm h-100">
+                <h6 class="fw-bold small text-secondary text-uppercase tracking-wider mb-3">
+                  <i class="bi bi-list-task text-danger me-1"></i> Action Items Required
+                </h6>
+                {% if analysis.action_items %}
+                  <ul class="list-unstyled mb-0 d-flex flex-column gap-2 small">
+                    {% for act in analysis.action_items %}
+                      <li class="d-flex align-items-start gap-2 p-2 bg-body-tertiary rounded border">
+                        <i class="bi bi-square text-danger mt-1 flex-shrink-0"></i>
+                        <span class="fw-medium text-body">{{ act }}</span>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="small text-muted mb-0">No direct recipient action required.</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Suggested Response Angles / Hooks -->
+          {% if analysis.suggested_reply_hooks %}
+            <div class="card p-4 shadow-sm">
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <h6 class="fw-bold text-uppercase text-secondary small tracking-wider mb-0">
+                  <i class="bi bi-chat-quote text-primary me-1"></i> Suggested Reply Angles
+                </h6>
+                <a href="{% url 'email_reply' email.id %}" class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-robot me-1"></i> Open Reply Assistant
+                </a>
+              </div>
+              <div class="d-flex flex-column gap-2">
+                {% for hook in analysis.suggested_reply_hooks %}
+                  <div class="p-3 bg-body-tertiary rounded border d-flex align-items-center justify-content-between gap-3">
+                    <div class="d-flex align-items-start gap-2">
+                      <i class="bi bi-lightbulb-fill text-warning mt-1 flex-shrink-0"></i>
+                      <span class="small text-body fw-medium">{{ hook }}</span>
+                    </div>
+                    <a href="{% url 'email_reply' email.id %}?instruction={{ hook|urlencode }}" class="btn btn-sm btn-outline-secondary flex-shrink-0">
+                      Use in Reply
+                    </a>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Right: Meta Dimensions & Deadlines -->
+      <div class="col-12 col-lg-4">
+        <div class="d-flex flex-column gap-3">
+          <!-- Intelligence Badges Card -->
+          <div class="card p-4 shadow-sm">
+            <h6 class="fw-bold text-uppercase text-secondary small tracking-wider mb-3">Analysis Metrics</h6>
+            
+            <div class="d-flex flex-column gap-3">
+              <div>
+                <div class="small text-muted">Category</div>
+                <div class="fw-bold fs-6 text-primary mt-1">{{ analysis.category }}</div>
+              </div>
+
+              <div class="row g-2">
+                <div class="col-6">
+                  <div class="small text-muted">Priority</div>
+                  <span class="badge {% if analysis.priority == 'High' %}bg-danger{% elif analysis.priority == 'Medium' %}bg-warning text-dark{% else %}bg-secondary{% endif %} mt-1">
+                    {{ analysis.priority }}
+                  </span>
+                </div>
+                <div class="col-6">
+                  <div class="small text-muted">Importance</div>
+                  <span class="badge {% if analysis.is_important %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %} mt-1">
+                    {% if analysis.is_important %}Important{% else %}Normal{% endif %}
+                  </span>
+                </div>
+              </div>
+
+              <div class="row g-2">
+                <div class="col-6">
+                  <div class="small text-muted">Urgency</div>
+                  <div class="fw-semibold small mt-1 text-body">{{ analysis.urgency|default:"Moderate" }}</div>
+                </div>
+                <div class="col-6">
+                  <div class="small text-muted">Sentiment</div>
+                  <div class="fw-semibold small mt-1 text-body">{{ analysis.sentiment|default:"Professional" }}</div>
+                </div>
+              </div>
+
+              <div>
+                <div class="small text-muted">AI Confidence</div>
+                <div class="progress mt-1" style="height: 6px;">
+                  <div class="progress-bar bg-success" role="progressbar" style="width: {% widthratio analysis.confidence 1 100 %}%;"></div>
+                </div>
+                <div class="small text-muted mt-1 text-end">{% widthratio analysis.confidence 1 100 %}%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Extracted Deadlines / Schedules -->
+          {% if analysis.extracted_deadlines %}
+            <div class="card p-4 shadow-sm">
+              <h6 class="fw-bold text-uppercase text-secondary small tracking-wider mb-3">
+                <i class="bi bi-calendar-event text-danger me-1"></i> Deadlines & Schedule
+              </h6>
+              <div class="d-flex flex-column gap-2">
+                {% for dl in analysis.extracted_deadlines %}
+                  <div class="p-2 bg-danger-subtle text-danger border border-danger-subtle rounded small fw-semibold d-flex align-items-center gap-2">
+                    <i class="bi bi-clock-fill"></i>
+                    <span>{{ dl }}</span>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Original Email Preview -->
+          <div class="card p-3 shadow-sm bg-body-tertiary">
+            <h6 class="fw-bold small text-muted mb-2">Original Email Snippet</h6>
+            <div class="small text-body p-2 bg-body rounded border" style="max-height: 180px; overflow-y: auto; white-space: pre-wrap;">{{ email.body_text|default:email.snippet|truncatechars:800 }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <!-- Not Yet Analyzed State -->
+    <div class="card p-5 text-center shadow-sm">
+      <i class="bi bi-cpu fs-1 text-primary mb-3"></i>
+      <h5>Email Not Yet Analyzed with AI</h5>
+      <p class="text-muted small mb-3">Click below to run deep multi-dimensional intelligence extraction via Groq LPU.</p>
+      <div>
+        <form method="POST" action="{% url 'email_analyze' email.id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-stars me-1"></i> Analyze with Groq AI Now
+          </button>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

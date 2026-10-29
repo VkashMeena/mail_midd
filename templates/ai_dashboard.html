@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex flex-column gap-4">
+  <!-- Header & Toolbar -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+      <h3 class="fw-bold mb-1">
+        <i class="bi bi-cpu text-primary me-2"></i>AI Processing Dashboard
+      </h3>
+      <p class="text-muted small mb-0">Monitor background intelligence classification, category distribution, and error recovery</p>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <!-- Analyze New / Unprocessed Button -->
+      <form method="POST" action="{% url 'ai_engine:analyze_unprocessed' %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary btn-sm d-flex align-items-center gap-1 shadow-sm">
+          <i class="bi bi-play-circle-fill"></i>
+          <span>Analyze New Emails</span>
+        </button>
+      </form>
+
+      <!-- Retry Failed Button -->
+      {% if stats.failed > 0 %}
+        <form method="POST" action="{% url 'ai_engine:retry_failed' %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 shadow-sm">
+            <i class="bi bi-arrow-clockwise"></i>
+            <span>Retry Failed ({{ stats.failed }})</span>
+          </button>
+        </form>
+      {% endif %}
+
+      <a href="{% url 'inbox' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+        <i class="bi bi-inbox"></i>
+        <span>Go to Inbox</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Messages Alert -->
+  {% if messages %}
+    <div>
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- KPI Metric Cards Row -->
+  <div class="row g-3">
+    <div class="col-sm-6 col-lg-3">
+      <div class="card p-3 border shadow-sm">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="text-muted small fw-semibold">AI Completed</span>
+          <span class="badge bg-success-subtle text-success p-2 rounded-circle">
+            <i class="bi bi-check-circle-fill"></i>
+          </span>
+        </div>
+        <h3 class="fw-bold mb-0 text-success">{{ stats.completed }}</h3>
+        <small class="text-muted">Emails fully categorized</small>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+      <div class="card p-3 border shadow-sm">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="text-muted small fw-semibold">Pending Analysis</span>
+          <span class="badge bg-warning-subtle text-warning p-2 rounded-circle">
+            <i class="bi bi-clock-history"></i>
+          </span>
+        </div>
+        <h3 class="fw-bold mb-0 text-warning">{{ stats.pending }}</h3>
+        <small class="text-muted">Awaiting intelligence run</small>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+      <div class="card p-3 border shadow-sm">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="text-muted small fw-semibold">Processing</span>
+          <span class="badge bg-info-subtle text-info p-2 rounded-circle">
+            <i class="bi bi-arrow-repeat"></i>
+          </span>
+        </div>
+        <h3 class="fw-bold mb-0 text-info">{{ stats.processing }}</h3>
+        <small class="text-muted">Currently in flight</small>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+      <div class="card p-3 border shadow-sm">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="text-muted small fw-semibold">Failed Analysis</span>
+          <span class="badge bg-danger-subtle text-danger p-2 rounded-circle">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+          </span>
+        </div>
+        <h3 class="fw-bold mb-0 text-danger">{{ stats.failed }}</h3>
+        <small class="text-muted">Requires manual or retry run</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Distribution Breakdown -->
+  <div class="card border shadow-sm">
+    <div class="card-header bg-body-tertiary d-flex align-items-center justify-content-between py-3">
+      <h6 class="fw-bold mb-0">
+        <i class="bi bi-pie-chart-fill text-primary me-2"></i>AI Categorized Distribution
+      </h6>
+      <span class="badge bg-secondary-subtle text-secondary">{{ stats.completed }} total classified</span>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-3">
+        {% for cat in stats.category_distribution %}
+          <div class="col-sm-6 col-md-4 col-lg-3">
+            <a href="{% url 'emails:category_detail' cat.name %}" class="card p-3 text-decoration-none border h-100 hover-shadow transition">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="badge {{ cat.meta.bg }} {{ cat.meta.text }} p-2">
+                  <i class="bi {{ cat.meta.icon }} me-1"></i>{{ cat.name }}
+                </span>
+                <span class="fw-bold fs-5 text-body">{{ cat.count }}</span>
+              </div>
+              <small class="text-muted">Browse {{ cat.name }} emails &rarr;</small>
+            </a>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Failed AI Emails Section (Section 45) -->
+  {% if stats.failed_emails %}
+    <div class="card border shadow-sm">
+      <div class="card-header bg-danger-subtle text-danger-emphasis py-3 d-flex align-items-center justify-content-between">
+        <h6 class="fw-bold mb-0">
+          <i class="bi bi-exclamation-octagon-fill me-2"></i>Failed AI Analysis ({{ stats.failed }})
+        </h6>
+        <small>Safe retry available without data loss</small>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col" class="ps-4">Email Subject</th>
+              <th scope="col">Sender</th>
+              <th scope="col">Failure Reason</th>
+              <th scope="col">Date</th>
+              <th scope="col" class="text-end pe-4">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for email in stats.failed_emails %}
+              <tr>
+                <td class="ps-4 fw-semibold">
+                  <a href="{% url 'emails:detail' email.id %}" class="text-decoration-none text-body">
+                    {{ email.subject }}
+                  </a>
+                </td>
+                <td>
+                  <span class="small">{{ email.effective_sender_name }}</span>
+                </td>
+                <td>
+                  <span class="text-danger small font-monospace">
+                    {{ email.ai_error|default:"AI service returned an unexpected response."|truncatechars:100 }}
+                  </span>
+                </td>
+                <td class="small text-muted">
+                  {{ email.received_at|date:"M d, g:i A" }}
+                </td>
+                <td class="text-end pe-4">
+                  <form method="POST" action="{% url 'ai_engine:analyze_single' email.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-primary" title="Retry AI Analysis">
+                      <i class="bi bi-arrow-clockwise me-1"></i>Retry
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

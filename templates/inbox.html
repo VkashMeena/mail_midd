@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex flex-column gap-3">
+  <!-- Inbox Header Toolbar -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+      <h3 class="fw-bold mb-1">Inbox</h3>
+      <p class="text-muted small mb-0">{{ total_count }} emails &bull; {{ unread_count }} unread</p>
+    </div>
+
+    <!-- Toolbar Actions -->
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <!-- Filter Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-funnel me-1"></i>
+          {% if current_filter == 'unread' %}Unread
+          {% elif current_filter == 'read' %}Read
+          {% elif current_filter == 'starred' %}Starred
+          {% elif current_filter == 'important' %}Important
+          {% elif current_filter == 'gmail_important' %}Gmail Important
+          {% elif current_filter == 'ai_important' %}AI Important
+          {% elif current_filter == 'high_priority' %}High Priority
+          {% elif current_filter == 'ai_processed' %}AI Processed
+          {% elif current_filter == 'ai_pending' %}AI Pending
+          {% elif current_filter == 'ai_failed' %}AI Failed
+          {% elif current_filter == 'pinned' %}Pinned
+          {% else %}All Emails{% endif %}
+        </button>
+        <ul class="dropdown-menu shadow-sm">
+          <li><a class="dropdown-item {% if current_filter == 'all' %}active{% endif %}" href="?filter=all&q={{ search_query }}">All Emails</a></li>
+          <li><a class="dropdown-item {% if current_filter == 'unread' %}active{% endif %}" href="?filter=unread&q={{ search_query }}">Unread</a></li>
+          <li><a class="dropdown-item {% if current_filter == 'read' %}active{% endif %}" href="?filter=read&q={{ search_query }}">Read</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item {% if current_filter == 'important' %}active{% endif %}" href="?filter=important&q={{ search_query }}">Important (All)</a></li>
+          <li><a class="dropdown-item {% if current_filter == 'ai_important' %}active{% endif %}" href="?filter=ai_important&q={{ search_query }}">AI Important</a></li>
+          <li><a class="dropdown-item {% if current_filter == 'gmail_important' %}active{% endif %}" href="?filter=gmail_important&q={{ search_query }}">Gmail Important</a></li>
+          <li><a class="dropdown-item {% if current_filter == 'high_priority' %}active{% endif %}" href="?filter=high_priority&q={{ search_query }}">High Priority</a></li>
+          <li><a class="dropdown-item {% if current_filter == 'starred' %}active{% endif %}" href="?filter=starred&q={{ search_query }}">Starred</a></li>
+          <li><a class="dropdown-item {% if current_filter == 'pinned' %}active{% endif %}" href="?filter=pinned&q={{ search_query }}">Pinned</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item {% if current_filter == 'ai_processed' %}active{% endif %}" href="?filter=ai_processed&q={{ search_query }}">AI Processed</a></li>
+          <li><a class="dropdown-item {% if current_filter == 'ai_pending' %}active{% endif %}" href="?filter=ai_pending&q={{ search_query }}">AI Pending</a></li>
+          <li><a class="dropdown-item {% if current_filter == 'ai_failed' %}active{% endif %}" href="?filter=ai_failed&q={{ search_query }}">AI Failed</a></li>
+        </ul>
+      </div>
+
+      <!-- Sort Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-arrow-down-up me-1"></i>
+          Sort
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+          <li><a class="dropdown-item {% if current_sort == 'newest' or not current_sort %}active{% endif %}" href="?sort=newest&filter={{ current_filter }}&q={{ search_query }}">Newest First</a></li>
+          <li><a class="dropdown-item {% if current_sort == 'oldest' %}active{% endif %}" href="?sort=oldest&filter={{ current_filter }}&q={{ search_query }}">Oldest First</a></li>
+          <li><a class="dropdown-item {% if current_sort == 'unread' %}active{% endif %}" href="?sort=unread&filter={{ current_filter }}&q={{ search_query }}">Unread First</a></li>
+          <li><a class="dropdown-item {% if current_sort == 'sender' %}active{% endif %}" href="?sort=sender&filter={{ current_filter }}&q={{ search_query }}">Sender Name</a></li>
+          <li><a class="dropdown-item {% if current_sort == 'priority' %}active{% endif %}" href="?sort=priority&filter={{ current_filter }}&q={{ search_query }}">Priority Level</a></li>
+        </ul>
+      </div>
+
+      <!-- Select All button helper -->
+      <button type="button" class="btn btn-outline-secondary btn-sm" id="selectAllBtn" onclick="
+        const checkboxes = document.querySelectorAll('.email-select-checkbox');
+        const anyUnchecked = Array.from(checkboxes).some(c => !c.checked);
+        checkboxes.forEach(c => c.checked = anyUnchecked);
+      ">
+        <i class="bi bi-check2-all me-1"></i>Select All
+      </button>
+
+      <!-- Bulk Analyze Selected Button (Section 22) -->
+      <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1" onclick="
+        const checked = document.querySelectorAll('.email-select-checkbox:checked');
+        if (checked.length === 0) {
+          alert('Please select at least one email to analyze.');
+          return;
+        }
+        document.getElementById('inboxBulkForm').submit();
+      ">
+        <i class="bi bi-stars"></i>
+        <span>Analyze Selected</span>
+      </button>
+
+      <!-- Analyze New / Unprocessed Button (Section 23) -->
+      <form method="POST" action="{% url 'ai_engine:analyze_unprocessed' %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1" title="Analyze pending emails with AI">
+          <i class="bi bi-cpu"></i>
+          <span>Analyze New</span>
+        </button>
+      </form>
+
+      <!-- Real Sync Gmail Button -->
+      {% if connected_account %}
+        <form method="POST" action="{% url 'gmail:sync' %}" class="d-inline" id="syncGmailForm" onsubmit="
+          const btn = document.getElementById('syncGmailBtn');
+          btn.disabled = true;
+          btn.innerHTML = '<span class=\'spinner-border spinner-border-sm me-1\' role=\'status\'></span> Syncing...';
+        ">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary btn-sm d-flex align-items-center gap-1 shadow-sm" id="syncGmailBtn" title="Synchronize latest emails from Gmail">
+            <i class="bi bi-arrow-clockwise"></i>
+            <span>Sync Gmail</span>
+          </button>
+        </form>
+      {% else %}
+        <a href="{% url 'gmail:connect' %}" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1" title="Connect Gmail to start synchronizing">
+          <i class="bi bi-link-45deg"></i>
+          <span>Connect Gmail</span>
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Search Filter Active Pill -->
+  {% if search_query %}
+    <div class="d-flex align-items-center gap-2 p-2 bg-body-tertiary rounded small">
+      <span>Search results for: <strong>"{{ search_query }}"</strong></span>
+      <a href="{% url 'inbox' %}" class="btn btn-sm btn-link p-0 text-danger text-decoration-none">
+        <i class="bi bi-x-circle"></i> Clear filter
+      </a>
+    </div>
+  {% endif %}
+
+  <!-- Messages Alert -->
+  {% if messages %}
+    <div class="mb-2">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Email List & Bulk Form -->
+  {% if emails %}
+    <form method="POST" action="{% url 'ai_engine:analyze_batch' %}" id="inboxBulkForm">
+      {% csrf_token %}
+      <div class="email-list-container">
+        {% for email in emails %}
+          {% include 'components/email_row.html' with email=email %}
+        {% endfor %}
+      </div>
+    </form>
+
+    <!-- Pagination -->
+    {% if emails.has_other_pages %}
+      <nav aria-label="Page navigation" class="mt-3">
+        <ul class="pagination pagination-sm justify-content-center">
+          {% if emails.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ emails.previous_page_number }}&filter={{ current_filter }}&q={{ search_query }}&sort={{ current_sort }}">Previous</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+          {% endif %}
+
+          {% for p in emails.paginator.page_range %}
+            {% if emails.number == p %}
+              <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+            {% else %}
+              <li class="page-item"><a class="page-link" href="?page={{ p }}&filter={{ current_filter }}&q={{ search_query }}&sort={{ current_sort }}">{{ p }}</a></li>
+            {% endif %}
+          {% endfor %}
+
+          {% if emails.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ emails.next_page_number }}&filter={{ current_filter }}&q={{ search_query }}&sort={{ current_sort }}">Next</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Next</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+    {% endif %}
+
+  {% else %}
+    {% include 'components/empty_state.html' with empty_title="No emails found" empty_message="Synchronize your Gmail account or search with a different keyword." empty_action_url="/inbox/" empty_action_label="Refresh Inbox" %}
+  {% endif %}
+</div>
+{% endblock %}

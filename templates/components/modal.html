@@ -1,0 +1,81 @@
+<!-- Add Priority Sender Modal -->
+<div class="modal fade" id="addPrioritySenderModal" tabindex="-1" aria-labelledby="addPrioritySenderModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="addPrioritySenderModalLabel">
+          <i class="bi bi-person-plus text-primary me-2"></i>Add Priority Sender
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{% url 'emails:priority_sender_add' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Display / Contact Name</label>
+            <input type="text" name="display_name" class="form-control" placeholder="e.g. HOD College or Company HR" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Email Address</label>
+            <input type="email" name="email_address" class="form-control" placeholder="e.g. hod@college.edu" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Priority Level</label>
+            <select name="priority" class="form-select">
+              <option value="High" selected>High Priority (Immediate Alert)</option>
+              <option value="Medium">Medium Priority</option>
+              <option value="Low">Low Priority</option>
+            </select>
+          </div>
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" name="is_important" id="modalImportantSwitch" checked>
+            <label class="form-check-label" for="modalImportantSwitch">Automatically mark emails as Important</label>
+          </div>
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" name="notification_enabled" id="notifSwitch" checked>
+            <label class="form-check-label" for="notifSwitch">Notify immediately upon receiving email</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save Sender</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- AI Analyze Modal (Phase 1 Preview) -->
+<div class="modal fade" id="aiAnalyzeModal" tabindex="-1" aria-labelledby="aiAnalyzeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="aiAnalyzeModalLabel">
+          <i class="bi bi-stars text-primary me-2"></i>AI Analysis Preview
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center p-4">
+        <div class="rounded-circle bg-primary-subtle text-primary mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 64px; height: 64px;">
+          <i class="bi bi-robot fs-2"></i>
+        </div>
+        <h6 class="fw-bold mb-2">AI Engine Architecture Ready</h6>
+        <p class="text-muted small mb-3">
+          In Phase 1, the AI Engine pipeline (Classifier, Summarizer, and Reply Generator) is architecturally connected.
+          Live LLM inference integration will activate in Phase 5 with configurable models (OpenAI, Gemini, Ollama).
+        </p>
+        <div class="p-3 bg-body-tertiary rounded text-start">
+          <div class="small fw-semibold text-muted mb-1">Target Classification Pipeline:</div>
+          <ul class="small text-muted mb-0 ps-3">
+            <li>Intent & Category Detection (13 taxonomies)</li>
+            <li>Priority Scoring (High / Medium / Low)</li>
+            <li>Action Item & Deadline Extraction</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

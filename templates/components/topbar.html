@@ -1,0 +1,124 @@
+<header class="app-topbar">
+  <div class="d-flex align-items-center gap-3">
+    <!-- Mobile Hamburger Toggle -->
+    <button type="button" class="btn btn-outline-secondary btn-sm d-md-none mobile-menu-btn p-1 px-2" id="mobileMenuBtn" aria-label="Toggle navigation menu">
+      <i class="bi bi-list fs-5"></i>
+    </button>
+
+    <!-- Global Search -->
+    <form class="topbar-search-form d-none d-md-block" method="GET" action="{% url 'inbox' %}">
+      <i class="bi bi-search"></i>
+      <input
+        type="search"
+        name="q"
+        id="globalSearchInput"
+        class="form-control topbar-search-input"
+        placeholder="Search emails... (Press '/' to focus)"
+        value="{{ search_query|default:'' }}"
+        aria-label="Search emails"
+      />
+    </form>
+  </div>
+
+  <div class="topbar-actions">
+    <!-- AI Status Indicator -->
+    <div class="ai-status-pill" title="AI Engine Ready (Phase 1 UI Mode)">
+      <span class="ai-pulse-dot"></span>
+      <span class="ai-status-label">AI Engine Ready</span>
+    </div>
+
+    <!-- Gmail Status Indicator (Section 27) -->
+    {% if user.profile.is_google_connected %}
+      <a href="{% url 'settings_gmail' %}" class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none py-1 px-2 d-none d-sm-inline-flex align-items-center gap-1" title="Gmail Connected">
+        <span class="rounded-circle bg-success" style="width: 6px; height: 6px; display: inline-block;"></span>
+        <span>Gmail Connected</span>
+      </a>
+    {% endif %}
+
+    <!-- Theme Toggle (Light / Dark) -->
+    <button type="button" class="topbar-icon-btn" id="themeToggleBtn" title="Toggle Light / Dark Mode" aria-label="Toggle theme">
+      <i class="bi bi-moon-stars" id="themeToggleIcon"></i>
+    </button>
+
+    <!-- Notifications Dropdown -->
+    <div class="dropdown">
+      <button class="topbar-icon-btn" type="button" id="notifDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications">
+        <i class="bi bi-bell"></i>
+        {% if global_unread_notifications > 0 %}
+          <span class="topbar-icon-badge"></span>
+        {% endif %}
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end shadow-lg py-2" aria-labelledby="notifDropdownBtn" style="width: 320px; max-height: 420px; overflow-y: auto;">
+        <li class="dropdown-header d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+          <span class="fw-bold">Notifications</span>
+          {% if global_unread_notifications > 0 %}
+            <span class="badge bg-primary-subtle text-primary">{{ global_unread_notifications }} new</span>
+          {% endif %}
+        </li>
+        {% if recent_notifications %}
+          {% for notif in recent_notifications %}
+            <li>
+              <a class="dropdown-item px-3 py-2 border-bottom d-flex align-items-start gap-2 {% if not notif.is_read %}bg-body-tertiary{% endif %}" href="{% if notif.action_url %}{{ notif.action_url }}{% else %}{% url 'notifications' %}{% endif %}">
+                <i class="bi {{ notif.icon_class }} fs-6 mt-1"></i>
+                <div class="text-truncate">
+                  <div class="fw-semibold text-truncate" style="font-size: 0.85rem;">{{ notif.title }}</div>
+                  <small class="text-muted d-block text-truncate" style="font-size: 0.78rem;">{{ notif.message }}</small>
+                </div>
+              </a>
+            </li>
+          {% endfor %}
+        {% else %}
+          <li class="px-3 py-4 text-center text-muted">
+            <i class="bi bi-check2-circle fs-3 text-secondary d-block mb-1"></i>
+            <small>No recent notifications</small>
+          </li>
+        {% endif %}
+        <li class="p-2 text-center">
+          <a href="{% url 'notifications' %}" class="btn btn-sm btn-link text-decoration-none">View All Notifications</a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- User Profile Dropdown -->
+    {% if user.is_authenticated %}
+    <div class="dropdown">
+      <button class="btn btn-link text-decoration-none p-0 d-flex align-items-center gap-2" type="button" id="userDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
+        {% if user.profile.avatar %}
+          <img src="{{ user.profile.avatar.url }}" alt="{{ user.profile.get_display_name }}" class="rounded-circle object-fit-cover shadow-sm" style="width: 36px; height: 36px;">
+        {% else %}
+          <div class="user-avatar" style="width: 36px; height: 36px; font-size: 0.9rem;">
+            {{ user.profile.get_display_name|default:user.email|make_list|first|upper }}
+          </div>
+        {% endif %}
+        <div class="d-none d-lg-block text-start">
+          <div class="fw-semibold text-body" style="font-size: 0.88rem; line-height: 1.2;">{{ user.profile.get_display_name|default:user.email }}</div>
+          <small class="text-muted" style="font-size: 0.75rem;">Workspace Account</small>
+        </div>
+        <i class="bi bi-chevron-down text-muted fs-6 d-none d-lg-inline"></i>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userDropdownBtn">
+        <li class="dropdown-header px-3 py-2">
+          <div class="fw-semibold">{{ user.profile.get_display_name }}</div>
+          <small class="text-muted font-monospace">{{ user.email }}</small>
+        </li>
+        <li><hr class="dropdown-divider my-1"></li>
+        <li><a class="dropdown-item py-2" href="{% url 'profile' %}"><i class="bi bi-person-badge me-2"></i> User Profile</a></li>
+        <li><a class="dropdown-item py-2" href="{% url 'settings' %}"><i class="bi bi-gear me-2"></i> Workspace Settings</a></li>
+        <li><a class="dropdown-item py-2" href="{% url 'priority_senders' %}"><i class="bi bi-person-check me-2"></i> Priority Senders</a></li>
+        <li><hr class="dropdown-divider my-1"></li>
+        <li>
+          <a class="dropdown-item py-2 text-danger" href="{% url 'logout' %}">
+            <i class="bi bi-box-arrow-right me-2"></i> Sign Out
+          </a>
+        </li>
+      </ul>
+    </div>
+    {% else %}
+    <div>
+      <a href="{% url 'login' %}" class="btn btn-sm btn-primary">
+        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</header>

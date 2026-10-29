@@ -1,0 +1,738 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex flex-column gap-3">
+  <!-- Top Navigation & Action Toolbar -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <a href="{% url 'inbox' %}" class="btn btn-outline-secondary btn-sm align-self-start">
+      <i class="bi bi-arrow-left me-1"></i> Back to Inbox
+    </a>
+
+    <!-- Action Toolbar -->
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <!-- Star Toggle -->
+      <a href="{% url 'emails:toggle_action' email.id 'star' %}" class="btn btn-outline-secondary btn-sm" title="Star Email">
+        <i class="bi {% if email.is_starred %}bi-star-fill text-warning{% else %}bi-star{% endif %} me-1"></i>
+        {% if email.is_starred %}Starred{% else %}Star{% endif %}
+      </a>
+
+      <!-- Pin Toggle -->
+      <a href="{% url 'emails:toggle_action' email.id 'pin' %}" class="btn btn-outline-secondary btn-sm" title="Pin Email">
+        <i class="bi {% if email.is_pinned %}bi-pin-angle-fill text-primary{% else %}bi-pin-angle{% endif %} me-1"></i>
+        {% if email.is_pinned %}Pinned{% else %}Pin{% endif %}
+      </a>
+
+      <!-- User Importance Override Button -->
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#overrideTagsModal">
+        <i class="bi bi-sliders me-1"></i> Edit Tags & Overrides
+      </button>
+
+      <!-- AI Re-analyze or Analyze Button -->
+      <form method="POST" action="{% url 'email_analyze' email.id %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn {% if email.ai_status == 'COMPLETED' %}btn-outline-primary{% else %}btn-primary{% endif %} btn-sm d-flex align-items-center gap-1 shadow-sm">
+          <i class="bi bi-stars"></i>
+          <span>{% if email.ai_status == 'COMPLETED' %}Re-analyze with Groq{% else %}Analyze with Groq AI{% endif %}</span>
+        </button>
+      </form>
+
+      <a href="{% url 'email_analyze' email.id %}" class="btn btn-outline-secondary btn-sm" title="View Full AI Analysis">
+        <i class="bi bi-search-heart me-1"></i> Full Analysis
+      </a>
+
+      <!-- Reply Assistant link -->
+      <a href="{% url 'email_reply' email.id %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-robot me-1"></i> AI Reply Assistant
+      </a>
+    </div>
+  </div>
+
+  <!-- Messages Alert -->
+  {% if messages %}
+    <div>
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- AI Intelligence Analysis Card (Section 46) -->
+  <div class="card border shadow-sm p-3 p-md-4 bg-body-tertiary">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 border-bottom pb-3 mb-3">
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-primary text-white p-2 rounded-circle">
+          <i class="bi bi-cpu fs-5"></i>
+        </span>
+        <div>
+          <div class="d-flex align-items-center gap-2">
+            <h6 class="fw-bold mb-0">AI Email Intelligence & Analyzer</h6>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.7rem;">Groq LPU</span>
+          </div>
+          <small class="text-muted">
+            Status:
+            {% if email.ai_status == 'COMPLETED' %}
+              <span class="badge bg-success-subtle text-success">Completed</span>
+              {% if email.ai_processed_at %} &bull; {{ email.ai_processed_at|date:"M d, g:i A" }}{% endif %}
+            {% elif email.ai_status == 'PROCESSING' %}
+              <span class="badge bg-info-subtle text-info">Processing...</span>
+            {% elif email.ai_status == 'FAILED' %}
+              <span class="badge bg-danger-subtle text-danger">Failed</span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary">Pending Analysis</span>
+            {% endif %}
+          </small>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2">
+        {% if email.analysis %}
+          <a href="{% url 'email_analyze' email.id %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-box-arrow-up-right me-1"></i> Detailed Breakdown
+          </a>
+        {% endif %}
+        {% if email.user_category or email.user_is_important is not None or email.user_priority %}
+          <span class="badge bg-info-subtle text-info border border-info-subtle" title="User manually modified classification tags">
+            <i class="bi bi-pencil-fill me-1"></i>User Overrides Active
+          </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- AI Meta Badges Row -->
+    <div class="row g-3 align-items-center">
+      <div class="col-sm-6 col-md-3">
+        <div class="text-muted small">Category</div>
+        <div class="d-flex align-items-center gap-1 mt-1">
+          <span class="badge {{ email.effective_category_meta.bg }} {{ email.effective_category_meta.text }} border border-opacity-25 fs-6 py-1 px-2">
+            <i class="bi {{ email.effective_category_meta.icon }} me-1"></i>{{ email.effective_category }}
+          </span>
+          {% if email.user_category %}
+            <small class="text-muted" title="Original AI: {{ email.ai_category|default:'None' }}">(User)</small>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="col-sm-6 col-md-3">
+        <div class="text-muted small">Effective Importance</div>
+        <div class="d-flex align-items-center gap-1 mt-1">
+          {% if email.effective_importance %}
+            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fs-6 py-1 px-2">
+              <i class="bi bi-exclamation-circle-fill me-1"></i>Important
+            </span>
+          {% else %}
+            <span class="badge bg-secondary-subtle text-secondary fs-6 py-1 px-2">
+              Normal
+            </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="col-sm-6 col-md-3">
+        <div class="text-muted small">Priority Level</div>
+        <div class="d-flex align-items-center gap-1 mt-1">
+          <span class="badge {{ email.effective_priority_meta.badge }} fs-6 py-1 px-2">
+            <i class="bi {{ email.effective_priority_meta.icon }} me-1"></i>{{ email.effective_priority }}
+          </span>
+          {% if email.user_priority %}
+            <small class="text-muted" title="Original AI: {{ email.ai_priority|default:'None' }}">(User)</small>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="col-sm-6 col-md-3">
+        <div class="text-muted small">AI Confidence</div>
+        <div class="fw-bold fs-6 mt-1 text-body">
+          {% if email.ai_confidence %}
+            {% widthratio email.ai_confidence 1 100 %}%
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Reason / Explanation -->
+    <div class="mt-3 pt-3 border-top">
+      <div class="small text-muted mb-1 fw-semibold">Objective & Intent:</div>
+      <p class="mb-0 text-body small">
+        {% if email.ai_objective %}
+          <i class="bi bi-bullseye text-primary me-1"></i><strong>{{ email.ai_objective }}</strong>
+        {% elif email.effective_importance_reason %}
+          <i class="bi bi-info-circle text-primary me-1"></i><strong>{{ email.effective_importance_reason }}</strong>
+        {% elif email.ai_reason %}
+          <i class="bi bi-info-circle text-primary me-1"></i>{{ email.ai_reason }}
+        {% else %}
+          <span class="text-muted fst-italic">Email has not been analyzed by AI yet. Click "Analyze with Groq AI" above to generate insights.</span>
+        {% endif %}
+      </p>
+
+      {% if email.analysis %}
+        <!-- Rich Analyzer Highlights -->
+        <div class="row g-2 mt-2">
+          {% if email.analysis.action_items %}
+            <div class="col-12 col-md-6">
+              <div class="p-2 bg-body rounded border">
+                <div class="small fw-bold text-danger mb-1 d-flex align-items-center gap-1">
+                  <i class="bi bi-list-task"></i> Action Items Required:
+                </div>
+                <ul class="list-unstyled mb-0 small">
+                  {% for act in email.analysis.action_items %}
+                    <li class="d-flex align-items-start gap-1 mb-1">
+                      <i class="bi bi-square text-danger mt-1" style="font-size: 0.75rem;"></i>
+                      <span>{{ act }}</span>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+          {% endif %}
+
+          {% if email.analysis.key_points %}
+            <div class="col-12 col-md-6">
+              <div class="p-2 bg-body rounded border">
+                <div class="small fw-bold text-success mb-1 d-flex align-items-center gap-1">
+                  <i class="bi bi-check2-circle"></i> Key Takeaways:
+                </div>
+                <ul class="list-unstyled mb-0 small">
+                  {% for pt in email.analysis.key_points %}
+                    <li class="d-flex align-items-start gap-1 mb-1">
+                      <i class="bi bi-arrow-right-short text-primary fs-6 lh-1"></i>
+                      <span>{{ pt }}</span>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        {% if email.analysis.suggested_reply_hooks %}
+          <div class="mt-2 pt-2 border-top">
+            <div class="small text-muted fw-semibold mb-1">Suggested Reply Angles:</div>
+            <div class="d-flex flex-wrap gap-2">
+              {% for hook in email.analysis.suggested_reply_hooks %}
+                <a href="{% url 'email_reply' email.id %}?instruction={{ hook|urlencode }}" class="btn btn-sm btn-outline-secondary py-1 px-2" style="font-size: 0.8rem;">
+                  <i class="bi bi-chat-dots me-1"></i>{{ hook }}
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      {% endif %}
+
+      {% if email.ai_status == 'FAILED' and email.ai_error %}
+        <div class="alert alert-danger py-2 px-3 mt-2 mb-0 small">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>
+          <strong>AI Analysis Failed:</strong> {{ email.ai_error }}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+
+  <!-- Email Card Container -->
+  <div class="card p-4 p-md-5 shadow-sm">
+    <!-- Subject & Badges Header -->
+    <div class="border-bottom pb-4 mb-4">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <h3 class="fw-bold mb-0">{{ email.subject }}</h3>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          {% if email.gmail_is_important %}
+            <span class="badge bg-warning-subtle text-warning border border-warning-subtle fs-6 py-2 px-3">
+              <i class="bi bi-tag-fill me-1"></i> Gmail Important
+            </span>
+          {% endif %}
+          <span class="badge {{ email.effective_category_meta.bg }} {{ email.effective_category_meta.text }} border border-opacity-25 fs-6 py-2 px-3">
+            <i class="bi {{ email.effective_category_meta.icon }} me-1"></i> {{ email.effective_category }}
+          </span>
+          <span class="badge {{ email.effective_priority_meta.badge }} fs-6 py-2 px-3">
+            <i class="bi {{ email.effective_priority_meta.icon }} me-1"></i> {{ email.effective_priority }} Priority
+          </span>
+        </div>
+      </div>
+
+      <!-- Sender & Recipient Info Row -->
+      <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+        <div class="d-flex align-items-start gap-3">
+          <div class="user-avatar" style="width: 44px; height: 44px; font-size: 1.1rem; background-color: #2563EB;">
+            {{ email.effective_sender_name|make_list|first|upper }}
+          </div>
+          <div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="fw-bold">{{ email.effective_sender_name }}</span>
+              {% if priority_sender %}
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle small" title="Custom Priority Sender">
+                  <i class="bi bi-star-fill me-1"></i>{{ priority_sender.display_name }}
+                </span>
+              {% else %}
+                <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none small" data-bs-toggle="modal" data-bs-target="#addSenderFromEmailModal">
+                  <i class="bi bi-person-plus me-1"></i>Mark as Important Sender
+                </button>
+              {% endif %}
+            </div>
+            <div class="text-muted small">&lt;{{ email.sender_email }}&gt; to &lt;{{ email.recipient_email }}&gt;</div>
+            {% if email.cc %}
+              <div class="text-muted small"><strong>Cc:</strong> {{ email.cc }}</div>
+            {% endif %}
+            {% if formatted_labels %}
+              <div class="mt-2 d-flex flex-wrap gap-1 align-items-center">
+                {% for lbl in formatted_labels %}
+                  <span class="badge {{ lbl.badge }} small py-1 px-2 d-inline-flex align-items-center gap-1">
+                    <i class="bi {{ lbl.icon }}"></i>
+                    <span>{{ lbl.display }}</span>
+                  </span>
+                {% endfor %}
+              </div>
+            {% elif labels %}
+              <div class="mt-2 d-flex flex-wrap gap-1 align-items-center">
+                {% for label in labels %}
+                  <span class="badge bg-secondary-subtle text-secondary small py-1 px-2">{{ label }}</span>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="text-muted small text-sm-end">
+          <div><i class="bi bi-calendar3 me-1"></i> {{ email.received_at|date:"l, F j, Y — g:i A" }}</div>
+          {% if email.gmail_account %}
+            <div class="mt-1 font-monospace text-secondary small">Via {{ email.gmail_account.email_address }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Email Attachments Section -->
+    {% if attachments %}
+      <div class="p-3 bg-body-tertiary rounded-3 border mb-4">
+        <div class="fw-semibold small text-body mb-2 d-flex align-items-center gap-1">
+          <i class="bi bi-paperclip fs-5"></i>
+          <span>Attachments ({{ attachments.count }})</span>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          {% for att in attachments %}
+            <div class="badge bg-body border text-body text-start p-2 d-flex align-items-center gap-2">
+              <i class="bi bi-file-earmark-fill text-primary fs-5"></i>
+              <div>
+                <div class="fw-semibold">{{ att.filename }}</div>
+                <small class="text-muted">{{ att.size_formatted }} &bull; {{ att.mime_type|default:"file" }}</small>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Email Viewer Tabs Header & Container -->
+    <div class="border rounded-3 overflow-hidden shadow-sm mb-4 bg-body">
+      <div class="d-flex flex-wrap align-items-center justify-content-between p-2 px-3 bg-body-tertiary border-bottom gap-2">
+        <ul class="nav nav-pills gap-1" id="emailViewTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active btn-sm py-1 px-3 d-flex align-items-center gap-2 fw-semibold" id="tab-html" data-bs-toggle="tab" data-bs-target="#view-html" type="button" role="tab" aria-controls="view-html" aria-selected="true">
+              <i class="bi bi-window text-primary"></i>
+              <span>Formatted Email</span>
+              {% if has_html %}
+                <span class="badge bg-primary text-white rounded-pill small" style="font-size: 0.7rem;">HTML</span>
+              {% endif %}
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link btn-sm py-1 px-3 d-flex align-items-center gap-2 fw-semibold" id="tab-text" data-bs-toggle="tab" data-bs-target="#view-text" type="button" role="tab" aria-controls="view-text" aria-selected="false">
+              <i class="bi bi-file-text text-secondary"></i>
+              <span>Plain Text</span>
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link btn-sm py-1 px-3 d-flex align-items-center gap-2 fw-semibold" id="tab-code" data-bs-toggle="tab" data-bs-target="#view-code" type="button" role="tab" aria-controls="view-code" aria-selected="false">
+              <i class="bi bi-code-slash text-success"></i>
+              <span>HTML Source Code</span>
+              <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small" style="font-size: 0.7rem;">&lt;/&gt;</span>
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link btn-sm py-1 px-3 d-flex align-items-center gap-2 fw-semibold" id="tab-headers" data-bs-toggle="tab" data-bs-target="#view-headers" type="button" role="tab" aria-controls="view-headers" aria-selected="false">
+              <i class="bi bi-info-circle text-info"></i>
+              <span>Headers & Meta</span>
+            </button>
+          </li>
+        </ul>
+
+        <!-- Fast View Actions -->
+        <div class="d-flex align-items-center gap-2 ms-auto">
+          {% if has_html %}
+            <a href="{% url 'inbox_raw_html' email.id %}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary btn-sm py-1 px-2 d-flex align-items-center gap-1" title="Open Full Email in a New Browser Window">
+              <i class="bi bi-box-arrow-up-right"></i>
+              <span class="d-none d-md-inline">Open in New Tab</span>
+            </a>
+          {% endif %}
+          <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2 d-flex align-items-center gap-1" id="copyCodeBtnTop" onclick="copyEmailCode()" title="Copy HTML Code to Clipboard">
+            <i class="bi bi-clipboard"></i>
+            <span class="d-none d-md-inline" id="copyCodeTopLabel">Copy Code</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab Content Panes -->
+      <div class="tab-content" id="emailViewTabsContent">
+        <!-- 1. Formatted View (Isolated Sandboxed Iframe) -->
+        <div class="tab-pane fade show active p-0" id="view-html" role="tabpanel" aria-labelledby="tab-html">
+          {% if has_html %}
+            <div class="position-relative w-100 bg-white" style="min-height: 450px;">
+              <iframe
+                id="emailContentFrame"
+                class="w-100 border-0 d-block"
+                sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin"
+                srcdoc="{{ html_document|escape }}"
+                style="width: 100%; min-height: 550px; border: none; display: block;"
+                loading="lazy">
+              </iframe>
+            </div>
+          {% else %}
+            <div class="p-4 p-md-5">
+              <div class="alert alert-secondary d-flex align-items-center gap-2 mb-3">
+                <i class="bi bi-info-circle-fill fs-5"></i>
+                <span>This email does not contain rich HTML styling. Displaying plain text representation.</span>
+              </div>
+              <div class="p-3 bg-light rounded border text-body" style="white-space: pre-wrap; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6;">
+                {{ cleaned_text|default:email.body_text|linebreaksbr }}
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- 2. Plain Text View -->
+        <div class="tab-pane fade p-3 p-md-4" id="view-text" role="tabpanel" aria-labelledby="tab-text">
+          <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+            <div class="small text-muted fw-semibold">
+              <i class="bi bi-file-text me-1"></i>Clean Plain Text Body
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2" onclick="copyPlainText()">
+              <i class="bi bi-clipboard me-1"></i><span id="copyTextLabel">Copy Text</span>
+            </button>
+          </div>
+          <pre id="plainTextContent" class="p-3 bg-light rounded border text-body font-monospace small mb-0" style="white-space: pre-wrap; word-break: break-word; max-height: 600px; overflow-y: auto; line-height: 1.6;">{{ cleaned_text|default:email.body_text }}</pre>
+        </div>
+
+        <!-- 3. HTML Source Code View ("Show Code Here") -->
+        <div class="tab-pane fade p-3 p-md-4 bg-dark text-light" id="view-code" role="tabpanel" aria-labelledby="tab-code">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom border-secondary">
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-success-subtle text-success border border-success-subtle font-monospace">&lt;HTML /&gt;</span>
+              <span class="text-white-50 small">{{ code_lines_count }} lines &bull; {{ code_size_str }}</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <button type="button" class="btn btn-sm btn-outline-light py-1 px-3 d-flex align-items-center gap-1" id="copyCodeBtn" onclick="copyEmailCode()">
+                <i class="bi bi-clipboard"></i>
+                <span id="copyCodeLabel">Copy HTML Code</span>
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary text-white-50 py-1 px-3 d-flex align-items-center gap-1" onclick="downloadEmailHtml()">
+                <i class="bi bi-download"></i>
+                <span>Download .html</span>
+              </button>
+            </div>
+          </div>
+          <pre class="p-3 bg-black text-light rounded border border-secondary font-monospace small mb-0 overflow-auto" style="max-height: 650px; line-height: 1.5; tab-size: 2; font-size: 0.85rem;"><code id="rawHtmlCodeBlock">{{ html_code }}</code></pre>
+        </div>
+
+        <!-- 4. Headers & Technical Metadata View -->
+        <div class="tab-pane fade p-3 p-md-4" id="view-headers" role="tabpanel" aria-labelledby="tab-headers">
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle small mb-0">
+              <tbody>
+                <tr>
+                  <th class="bg-light text-muted" style="width: 200px;">Subject</th>
+                  <td class="fw-semibold">{{ email.subject }}</td>
+                </tr>
+                <tr>
+                  <th class="bg-light text-muted">From</th>
+                  <td>{{ email.sender_name }} &lt;{{ email.sender_email }}&gt;</td>
+                </tr>
+                <tr>
+                  <th class="bg-light text-muted">To</th>
+                  <td>&lt;{{ email.recipient_email }}&gt;</td>
+                </tr>
+                {% if email.cc %}
+                  <tr>
+                    <th class="bg-light text-muted">Cc</th>
+                    <td>{{ email.cc }}</td>
+                  </tr>
+                {% endif %}
+                <tr>
+                  <th class="bg-light text-muted">Received Date</th>
+                  <td>{{ email.received_at|date:"r" }} ({{ email.received_at|date:"l, F j, Y — g:i A" }})</td>
+                </tr>
+                <tr>
+                  <th class="bg-light text-muted">Gmail Message ID</th>
+                  <td class="font-monospace">{{ email.gmail_message_id|default:"(Local / Mock Message)" }}</td>
+                </tr>
+                <tr>
+                  <th class="bg-light text-muted">Gmail Thread ID</th>
+                  <td class="font-monospace">{{ email.gmail_thread_id|default:"—" }}</td>
+                </tr>
+                <tr>
+                  <th class="bg-light text-muted">Gmail Labels</th>
+                  <td>
+                    {% if formatted_labels %}
+                      <div class="d-flex flex-wrap gap-1">
+                        {% for lbl in formatted_labels %}
+                          <span class="badge {{ lbl.badge }} small py-1 px-2">
+                            <i class="bi {{ lbl.icon }} me-1"></i>{{ lbl.display }}
+                          </span>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                <tr>
+                  <th class="bg-light text-muted">AI Classification</th>
+                  <td>
+                    <span class="badge {{ email.effective_category_meta.bg }} {{ email.effective_category_meta.text }}">
+                      {{ email.effective_category }}
+                    </span>
+                    &bull; Priority: {{ email.effective_priority }}
+                    &bull; Important: {{ email.effective_importance|yesno:"Yes,No" }}
+                  </td>
+                </tr>
+                {% if email.ai_objective %}
+                  <tr>
+                    <th class="bg-light text-muted">Detected Objective</th>
+                    <td>{{ email.ai_objective }}</td>
+                  </tr>
+                {% endif %}
+                <tr>
+                  <th class="bg-light text-muted">Has Attachments</th>
+                  <td>{{ email.has_attachments|yesno:"Yes,No" }} ({{ attachments.count }} files)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Quick Reply Box -->
+    <div class="card p-3 bg-body-tertiary border mt-4">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="fw-semibold small"><i class="bi bi-stars text-primary me-1"></i> AI Smart Reply Studio</span>
+        <a href="{% url 'email_reply' email.id %}" class="small text-decoration-none fw-semibold">Open Full Reply Studio &rarr;</a>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'email_reply' email.id %}" class="btn btn-sm btn-primary">
+          <i class="bi bi-reply-fill me-1"></i> Compose Reply
+        </a>
+        <a href="{% url 'email_reply' email.id %}?tone=Professional" class="btn btn-sm btn-outline-primary">Professional Tone</a>
+        <a href="{% url 'email_reply' email.id %}?tone=Friendly" class="btn btn-sm btn-outline-secondary">Friendly Tone</a>
+        <a href="{% url 'email_reply' email.id %}?tone=Short" class="btn btn-sm btn-outline-secondary">Short Tone</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: User Override Tags (Section 47-49) -->
+<div class="modal fade" id="overrideTagsModal" tabindex="-1" aria-labelledby="overrideTagsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="overrideTagsModalLabel">
+          <i class="bi bi-sliders text-primary me-2"></i>Override AI Classification
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{% url 'emails:override_ai' email.id %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p class="text-muted small">
+            Manually override AI tags for this email. Your custom choices are preserved separately from AI results.
+          </p>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Custom Category</label>
+            <select name="user_category" class="form-select">
+              <option value="">-- Retain AI Category ({{ email.ai_category|default:'Uncategorized' }}) --</option>
+              {% for cat in allowed_categories %}
+                <option value="{{ cat }}" {% if email.user_category == cat %}selected{% endif %}>{{ cat }}</option>
+              {% endfor %}
+              {% if email.user_category %}
+                <option value="clear" class="text-danger">-- Clear Custom Override --</option>
+              {% endif %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Importance</label>
+            <select name="user_is_important" class="form-select">
+              <option value="">-- Retain Default / AI ({{ email.ai_is_important|yesno:'Important,Normal' }}) --</option>
+              <option value="true" {% if email.user_is_important is True %}selected{% endif %}>Always Mark as Important</option>
+              <option value="false" {% if email.user_is_important is False %}selected{% endif %}>Mark as Normal (Not Important)</option>
+              {% if email.user_is_important is not None %}
+                <option value="clear" class="text-danger">-- Clear Importance Override --</option>
+              {% endif %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Priority Level</label>
+            <select name="user_priority" class="form-select">
+              <option value="">-- Retain Default / AI ({{ email.ai_priority|default:'Medium' }}) --</option>
+              <option value="High" {% if email.user_priority == 'High' %}selected{% endif %}>High Priority</option>
+              <option value="Medium" {% if email.user_priority == 'Medium' %}selected{% endif %}>Medium Priority</option>
+              <option value="Low" {% if email.user_priority == 'Low' %}selected{% endif %}>Low Priority</option>
+              {% if email.user_priority %}
+                <option value="clear" class="text-danger">-- Clear Priority Override --</option>
+              {% endif %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save Custom Tags</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Quick Add Sender from Email -->
+<div class="modal fade" id="addSenderFromEmailModal" tabindex="-1" aria-labelledby="addSenderFromEmailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="addSenderFromEmailModalLabel">
+          <i class="bi bi-person-check text-primary me-2"></i>Add to Important Senders
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{% url 'emails:priority_sender_add' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p class="text-muted small">
+            Emails from this contact will automatically be flagged as <strong>Important</strong> with custom naming across the workspace.
+          </p>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Sender Email</label>
+            <input type="email" name="email_address" class="form-control" value="{{ email.sender_email }}" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Display / Nickname</label>
+            <input type="text" name="display_name" class="form-control" value="{{ email.sender_name|default:email.sender_email }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Priority Level</label>
+            <select name="priority" class="form-select">
+              <option value="High" selected>High Priority (Immediate Alert)</option>
+              <option value="Medium">Medium Priority</option>
+              <option value="Low">Low Priority</option>
+            </select>
+          </div>
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" name="is_important" id="modalIsImportantSwitch" checked>
+            <label class="form-check-label" for="modalIsImportantSwitch">Mark incoming emails as Important</label>
+          </div>
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" name="notification_enabled" id="modalNotifSwitch" checked>
+            <label class="form-check-label" for="modalNotifSwitch">Notify immediately upon receiving email</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save Important Sender</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// Auto-resize sandboxed iframe to fit email height seamlessly without double scrollbars
+function resizeEmailIframe() {
+  const frame = document.getElementById('emailContentFrame');
+  if (!frame) return;
+  try {
+    const doc = frame.contentDocument || (frame.contentWindow ? frame.contentWindow.document : null);
+    if (doc && doc.documentElement) {
+      const scrollHeight = doc.documentElement.scrollHeight || 0;
+      const bodyHeight = doc.body ? doc.body.scrollHeight : 0;
+      const finalHeight = Math.max(scrollHeight, bodyHeight, 450);
+      frame.style.height = (finalHeight + 30) + 'px';
+    }
+  } catch (e) {
+    console.debug('Email iframe auto-size caught (cross-origin or sandboxed):', e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const frame = document.getElementById('emailContentFrame');
+  if (frame) {
+    frame.addEventListener('load', function() {
+      resizeEmailIframe();
+      setTimeout(resizeEmailIframe, 400);
+      setTimeout(resizeEmailIframe, 1500);
+    });
+  }
+
+  // Also re-measure when switching tabs to Formatted Email
+  const htmlTab = document.getElementById('tab-html');
+  if (htmlTab) {
+    htmlTab.addEventListener('shown.bs.tab', function() {
+      resizeEmailIframe();
+    });
+  }
+});
+
+// Copy Code function with visual feedback
+function copyEmailCode() {
+  const codeElem = document.getElementById('rawHtmlCodeBlock');
+  if (!codeElem) return;
+  const text = codeElem.textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    const label = document.getElementById('copyCodeLabel');
+    const labelTop = document.getElementById('copyCodeTopLabel');
+    if (label) label.textContent = 'Copied to Clipboard!';
+    if (labelTop) labelTop.textContent = 'Copied!';
+    setTimeout(function() {
+      if (label) label.textContent = 'Copy HTML Code';
+      if (labelTop) labelTop.textContent = 'Copy Code';
+    }, 2200);
+  }).catch(function(err) {
+    console.error('Could not copy code: ', err);
+  });
+}
+
+// Copy Plain Text function with visual feedback
+function copyPlainText() {
+  const textElem = document.getElementById('plainTextContent');
+  if (!textElem) return;
+  const text = textElem.textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    const label = document.getElementById('copyTextLabel');
+    if (label) label.textContent = 'Copied!';
+    setTimeout(function() {
+      if (label) label.textContent = 'Copy Text';
+    }, 2200);
+  });
+}
+
+// Download HTML file function
+function downloadEmailHtml() {
+  const codeElem = document.getElementById('rawHtmlCodeBlock');
+  if (!codeElem) return;
+  const text = codeElem.textContent;
+  const blob = new Blob([text], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'email_{{ email.id }}.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}
+

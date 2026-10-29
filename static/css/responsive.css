@@ -1,0 +1,147 @@
+/* ==========================================================================
+   AI Smart Mail Manager — Responsive Breakpoints & Mobile Adaptations
+   ========================================================================== */
+
+/* Tablet Breakpoint (<= 992px) */
+@media (max-width: 992px) {
+  .app-sidebar {
+    width: var(--sidebar-collapsed-width);
+  }
+
+  .sidebar-header .brand-text,
+  .nav-section-title,
+  .nav-link-text,
+  .nav-counter,
+  .user-meta-info {
+    display: none !important;
+  }
+
+  .nav-link-item {
+    justify-content: center;
+    padding: 0.75rem 0;
+  }
+
+  .nav-link-item i {
+    font-size: 1.35rem;
+    margin: 0;
+  }
+
+  .sidebar-footer {
+    justify-content: center;
+    padding: 0.75rem 0;
+  }
+
+  .page-container {
+    padding: 1.25rem 1rem;
+  }
+
+  .topbar-search-form {
+    width: 260px;
+  }
+}
+
+/* Mobile Breakpoint (<= 768px) */
+@media (max-width: 768px) {
+  /* Convert fixed sidebar into mobile offcanvas / hidden by default */
+  .app-sidebar {
+    position: fixed;
+    left: -280px;
+    width: 280px !important;
+    height: 100vh;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.4);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1050;
+  }
+
+  .app-sidebar.show-mobile {
+    transform: translateX(280px);
+  }
+
+  .app-sidebar .brand-text,
+  .app-sidebar .nav-section-title,
+  .app-sidebar .nav-link-text,
+  .app-sidebar .nav-counter,
+  .app-sidebar .user-meta-info {
+    display: inline-block !important;
+  }
+
+  .app-sidebar .nav-link-item {
+    justify-content: flex-start;
+    padding: 0.65rem 0.85rem;
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: 1040;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .sidebar-backdrop.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Topbar Mobile */
+  .app-topbar {
+    padding: 0 1rem;
+  }
+
+  .mobile-menu-btn {
+    display: inline-flex !important;
+  }
+
+  .topbar-search-form {
+    display: none; /* Can be toggled or accessed via modal on mobile */
+  }
+
+  .ai-status-pill .ai-status-label {
+    display: none;
+  }
+
+  /* Email list rows stack cleanly on mobile */
+  .email-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .email-sender {
+    width: 100%;
+    font-weight: 600;
+  }
+
+  .email-content-preview {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .email-subject {
+    width: 100%;
+  }
+
+  .email-snippet {
+    width: 100%;
+  }
+
+  .email-meta {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 0.35rem;
+  }
+
+  /* Footer Mobile */
+  .app-footer {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+    padding: 1rem;
+  }
+}

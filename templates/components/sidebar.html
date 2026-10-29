@@ -1,0 +1,144 @@
+{% load static %}
+<aside class="app-sidebar" id="appSidebar">
+  <!-- Sidebar Header -->
+  <div class="sidebar-header">
+    <a href="{% url 'dashboard' %}" class="brand-logo">
+      <div class="brand-icon-box">
+        <i class="bi bi-envelope-at-fill fs-5"></i>
+      </div>
+      <span class="brand-text">SmartMail <span class="badge bg-primary text-white" style="font-size: 0.65rem;">AI</span></span>
+    </a>
+  </div>
+
+  <!-- Sidebar Navigation -->
+  <div class="sidebar-content">
+    <ul class="sidebar-nav">
+      <li>
+        <a href="{% url 'dashboard' %}" class="nav-link-item {% if request.path == '/' or '/dashboard/' in request.path %}active{% endif %}">
+          <i class="bi bi-grid-1x2"></i>
+          <span class="nav-link-text">Dashboard</span>
+        </a>
+      </li>
+
+      <li>
+        <a href="{% url 'inbox' %}" class="nav-link-item {% if '/inbox/' in request.path or '/emails/' in request.path and not '/important/' in request.path and not '/pinned/' in request.path and not '/categories/' in request.path and not '/priority-senders/' in request.path %}active{% endif %}">
+          <i class="bi bi-inbox"></i>
+          <span class="nav-link-text">Inbox</span>
+          {% if global_unread_emails > 0 %}
+            <span class="nav-counter">{{ global_unread_emails }}</span>
+          {% endif %}
+        </a>
+      </li>
+
+      <li>
+        <a href="{% url 'important' %}" class="nav-link-item {% if '/important/' in request.path %}active{% endif %}">
+          <i class="bi bi-exclamation-circle"></i>
+          <span class="nav-link-text">Important</span>
+          {% if global_important_emails > 0 %}
+            <span class="nav-counter bg-danger">{{ global_important_emails }}</span>
+          {% endif %}
+        </a>
+      </li>
+
+      <li>
+        <a href="{% url 'pinned' %}" class="nav-link-item {% if '/pinned/' in request.path %}active{% endif %}">
+          <i class="bi bi-pin-angle"></i>
+          <span class="nav-link-text">Pinned</span>
+        </a>
+      </li>
+
+      <li>
+        <a href="{% url 'categories' %}" class="nav-link-item {% if '/categories/' in request.path %}active{% endif %}">
+          <i class="bi bi-tags"></i>
+          <span class="nav-link-text">Categories</span>
+        </a>
+      </li>
+
+      <li>
+        <a href="{% url 'priority_senders' %}" class="nav-link-item {% if '/priority-senders/' in request.path %}active{% endif %}">
+          <i class="bi bi-person-check"></i>
+          <span class="nav-link-text">Priority Senders</span>
+        </a>
+      </li>
+
+      <li>
+        <a href="{% url 'ai_engine:dashboard' %}" class="nav-link-item {% if request.path == '/ai/' or request.path == '/ai' %}active{% endif %}">
+          <i class="bi bi-cpu"></i>
+          <span class="nav-link-text">AI Processing</span>
+        </a>
+      </li>
+
+      <li>
+        <a href="{% url 'summary_today' %}" class="nav-link-item {% if '/summary/' in request.path or '/ai-summary/' in request.path %}active{% endif %}">
+          <i class="bi bi-stars"></i>
+          <span class="nav-link-text">AI Daily Summary</span>
+        </a>
+      </li>
+
+      <li>
+        <a href="{% url 'ai_reply' %}" class="nav-link-item {% if '/reply/' in request.path or '/ai-reply/' in request.path %}active{% endif %}">
+          <i class="bi bi-chat-quote"></i>
+          <span class="nav-link-text">AI Smart Reply</span>
+        </a>
+      </li>
+
+      <li>
+        <a href="{% url 'ai_analyzer' %}" class="nav-link-item {% if '/analyzer' in request.path or '/ai-analyzer' in request.path %}active{% endif %}">
+          <i class="bi bi-search-heart"></i>
+          <span class="nav-link-text">AI Email Analyzer</span>
+          <span class="badge bg-primary-subtle text-primary ms-auto" style="font-size: 0.65rem;">Groq</span>
+        </a>
+      </li>
+
+      <li class="nav-section-title">System</li>
+
+
+      <li>
+        <a href="{% url 'notifications' %}" class="nav-link-item {% if '/notifications/' in request.path %}active{% endif %}">
+          <i class="bi bi-bell"></i>
+          <span class="nav-link-text">Notifications</span>
+          {% if global_unread_notifications > 0 %}
+            <span class="nav-counter bg-warning text-dark">{{ global_unread_notifications }}</span>
+          {% endif %}
+        </a>
+      </li>
+
+      <li>
+        <a href="{% url 'settings' %}" class="nav-link-item {% if '/settings/' in request.path %}active{% endif %}">
+          <i class="bi bi-gear"></i>
+          <span class="nav-link-text">Settings</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Sidebar Footer / User Profile -->
+  <div class="sidebar-footer">
+    {% if user.is_authenticated %}
+    <div class="d-flex align-items-center justify-content-between w-100">
+      <a href="{% url 'profile' %}" class="user-profile-widget" title="View Profile">
+        {% if user.profile.avatar %}
+          <img src="{{ user.profile.avatar.url }}" alt="{{ user.profile.get_display_name }}" class="rounded-circle object-fit-cover flex-shrink-0" style="width: 36px; height: 36px;">
+        {% else %}
+          <div class="user-avatar">
+            {{ user.profile.get_display_name|default:user.email|make_list|first|upper }}
+          </div>
+        {% endif %}
+        <div class="user-meta-info">
+          <div class="user-meta-name">{{ user.profile.get_display_name|default:user.email }}</div>
+          <div class="user-meta-role">{{ user.email }}</div>
+        </div>
+      </a>
+      <a href="{% url 'logout' %}" class="btn btn-sm btn-link text-white-50 p-1" title="Sign Out" aria-label="Sign Out">
+        <i class="bi bi-box-arrow-right fs-5"></i>
+      </a>
+    </div>
+    {% else %}
+    <div class="d-flex align-items-center justify-content-center w-100">
+      <a href="{% url 'login' %}" class="btn btn-sm btn-outline-light w-100">
+        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</aside>

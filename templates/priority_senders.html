@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex flex-column gap-3">
+  <!-- Header & Add Button -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+      <h3 class="fw-bold mb-1">Important & Priority Senders</h3>
+      <p class="text-muted small mb-0">Custom contact rules: customize display names, flag incoming correspondence as important, and configure alerts</p>
+    </div>
+
+    <!-- Trigger Modal -->
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPrioritySenderModal">
+      <i class="bi bi-person-plus-fill me-1"></i> Add Important Sender
+    </button>
+  </div>
+
+  <!-- Messages Alert -->
+  {% if messages %}
+    <div>
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Priority Senders Table / List -->
+  {% if senders %}
+    <div class="card overflow-hidden shadow-sm">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col" class="ps-4">Custom Display Name</th>
+              <th scope="col">Sender Email Address</th>
+              <th scope="col">Importance Rule</th>
+              <th scope="col">Priority Tier</th>
+              <th scope="col">Immediate Alert</th>
+              <th scope="col" class="text-end pe-4">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sender in senders %}
+              <tr>
+                <td class="ps-4">
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="user-avatar bg-primary" style="width: 36px; height: 36px; font-size: 0.9rem;">
+                      {{ sender.display_name|make_list|first|upper }}
+                    </div>
+                    <div>
+                      <div class="fw-semibold text-body">{{ sender.display_name }}</div>
+                      {% if sender.is_demo %}
+                        <span class="badge badge-preview" style="font-size: 0.65rem;">Demo Contact</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="text-muted font-monospace small">&lt;{{ sender.email_address }}&gt;</span>
+                </td>
+                <td>
+                  {% if sender.is_important %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                      <i class="bi bi-check-circle-fill me-1"></i>Always Important
+                    </span>
+                  {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary">
+                      Standard
+                    </span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge {{ sender.priority_meta.badge }}">
+                    <i class="bi {{ sender.priority_meta.icon }} me-1"></i>{{ sender.priority }} Priority
+                  </span>
+                </td>
+                <td>
+                  {% if sender.notification_enabled %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                      <i class="bi bi-bell-fill me-1"></i>Active
+                    </span>
+                  {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary">
+                      <i class="bi bi-bell-slash me-1"></i>Muted
+                    </span>
+                  {% endif %}
+                </td>
+                <td class="text-end pe-4">
+                  <form method="POST" action="{% url 'emails:priority_sender_delete' sender.id %}" class="d-inline" onsubmit="return confirm('Remove {{ sender.display_name }} from priority senders?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove Important Sender">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    {% include 'components/empty_state.html' with empty_title="No priority senders defined" empty_message="Add key professors, recruiters, managers, or billing contacts to ensure you never miss critical emails." empty_icon="bi-person-check" empty_action_url="#" empty_action_label="+ Add First Important Sender" %}
+  {% endif %}
+</div>
+{% endblock %}

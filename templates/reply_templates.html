@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex flex-column gap-4">
+  <!-- Header -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+      <div class="d-flex align-items-center gap-2">
+        <h3 class="fw-bold mb-0">Reply Templates</h3>
+        <span class="badge bg-secondary-subtle text-secondary">Phase 7</span>
+      </div>
+      <p class="text-muted small mb-0 mt-1">Manage reusable static reply templates with automatic placeholder interpolation.</p>
+    </div>
+
+    <div>
+      <a href="{% url 'ai_reply' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Back to Reply Studio
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Left Column: Add New Template -->
+    <div class="col-12 col-lg-5">
+      <div class="card p-4 shadow-sm">
+        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+          <i class="bi bi-plus-circle text-primary"></i> Create New Template
+        </h5>
+
+        <form method="post" action="{% url 'reply_templates_manage' %}" class="d-flex flex-column gap-3">
+          {% csrf_token %}
+          <div>
+            <label for="templateName" class="form-label small fw-semibold">Template Name</label>
+            <input type="text" id="templateName" name="name" class="form-control form-control-sm" placeholder="e.g. Interview Availability, Thank You" required>
+          </div>
+
+          <div>
+            <label for="templateContent" class="form-label small fw-semibold d-flex justify-content-between">
+              <span>Template Content</span>
+            </label>
+            <textarea id="templateContent" name="content" class="form-control font-monospace" rows="8" placeholder="Dear {sender_name},&#10;&#10;Thank you for reaching out regarding '{subject}'...&#10;&#10;Best regards,&#10;{user_name}" required style="font-size: 0.9rem; line-height: 1.5;"></textarea>
+          </div>
+
+          <div class="p-3 bg-body-tertiary rounded border small text-muted">
+            <div class="fw-semibold text-dark mb-1">Available Placeholders:</div>
+            <ul class="mb-0 ps-3">
+              <li><code>{sender_name}</code> — Original sender's name</li>
+              <li><code>{sender_email}</code> — Original sender's email</li>
+              <li><code>{subject}</code> — Original email subject</li>
+              <li><code>{user_name}</code> — Your profile name</li>
+              <li><code>{date}</code> — Current date</li>
+            </ul>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-sm mt-1">
+            <i class="bi bi-check2-circle me-1"></i> Save Template
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Right Column: Existing Templates List -->
+    <div class="col-12 col-lg-7">
+      <div class="card p-4 shadow-sm">
+        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+          <i class="bi bi-bookmark text-primary"></i> Available Templates
+        </h5>
+
+        {% if templates %}
+          <div class="d-flex flex-column gap-3">
+            {% for tmpl in templates %}
+              <div class="p-3 bg-body-tertiary rounded-3 border">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold text-dark">{{ tmpl.name }}</span>
+                    {% if tmpl.is_default %}
+                      <span class="badge bg-secondary-subtle text-secondary small">System Default</span>
+                    {% else %}
+                      <span class="badge bg-primary-subtle text-primary small">Custom</span>
+                    {% endif %}
+                  </div>
+                  {% if not tmpl.is_default and tmpl.user == request.user %}
+                    <form method="post" action="{% url 'reply_template_delete' tmpl.id %}" onsubmit="return confirm('Are you sure you want to delete this template?');" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-link text-danger p-0 small text-decoration-none">
+                        <i class="bi bi-trash"></i> Delete
+                      </button>
+                    </form>
+                  {% endif %}
+                </div>
+                <div class="text-muted small lh-base p-2 bg-body rounded border font-monospace" style="white-space: pre-wrap; font-size: 0.85rem;">{{ tmpl.content }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="p-4 bg-body-tertiary rounded text-center text-muted small">
+            No templates found. Add your first template on the left!
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

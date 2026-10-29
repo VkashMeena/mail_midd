@@ -1,0 +1,50 @@
+<div class="card mb-3 p-3 {% if not notif.is_read %}border-primary border-start border-3 bg-body-tertiary{% endif %}" id="notification-item-{{ notif.id }}">
+  <div class="d-flex align-items-start justify-content-between gap-3">
+    <div class="d-flex align-items-start gap-3">
+      <div class="stat-icon-wrapper bg-primary-subtle text-primary mt-1" style="width: 40px; height: 40px; font-size: 1.2rem;">
+        <i class="bi {{ notif.icon_class }}"></i>
+      </div>
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+          <h6 class="mb-0 fw-semibold">{{ notif.title }}</h6>
+          {% if not notif.is_read %}
+            <span class="badge bg-primary text-white" style="font-size: 0.65rem;">NEW</span>
+          {% endif %}
+          <span class="badge {{ notif.badge_class }}" style="font-size: 0.65rem;">{{ notif.priority }}</span>
+          <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.7rem;">{{ notif.get_importance_source_display }}</span>
+          <span class="badge bg-light text-dark border" style="font-size: 0.7rem;">{{ notif.get_notification_type_display }}</span>
+        </div>
+        <p class="mb-2 text-muted" style="font-size: 0.9rem;">{{ notif.message }}</p>
+        <div class="d-flex align-items-center gap-3">
+          <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ notif.created_at|timesince }} ago</small>
+          {% if notif.action_url %}
+            <a href="{{ notif.action_url }}" class="btn btn-sm btn-link p-0 text-decoration-none">
+              View Email <i class="bi bi-arrow-right"></i>
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+      {% if not notif.is_read %}
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary mark-notification-btn"
+          data-notif-id="{{ notif.id }}"
+          title="Mark as read"
+        >
+          <i class="bi bi-check2"></i> <span class="d-none d-sm-inline">Mark Read</span>
+        </button>
+      {% endif %}
+      <button
+        type="button"
+        class="btn btn-sm btn-outline-danger delete-notification-btn"
+        data-notif-id="{{ notif.id }}"
+        title="Delete notification"
+      >
+        <i class="bi bi-trash3"></i>
+      </button>
+    </div>
+  </div>
+</div>

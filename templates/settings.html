@@ -1,0 +1,547 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex flex-column gap-4" style="max-width: 900px;">
+  <!-- Header -->
+  <div>
+    <h3 class="fw-bold mb-1">Settings & Configurations</h3>
+    <p class="text-muted small mb-0">Manage account credentials, third-party integrations, AI models, and interface settings</p>
+  </div>
+
+  <!-- Settings Nav Tabs -->
+  <ul class="nav nav-tabs border-bottom" id="settingsTab" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active fw-semibold" id="account-tab" data-bs-toggle="tab" data-bs-target="#accountTabPane" type="button" role="tab" aria-selected="true">
+        <i class="bi bi-person me-1"></i> Account
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link fw-semibold" id="gmail-tab" data-bs-toggle="tab" data-bs-target="#gmailTabPane" type="button" role="tab" aria-selected="false">
+        <i class="bi bi-google me-1"></i> Gmail Integration
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link fw-semibold" id="security-tab" data-bs-toggle="tab" data-bs-target="#securityTabPane" type="button" role="tab" aria-selected="false">
+        <i class="bi bi-shield-lock me-1"></i> Security
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link fw-semibold" id="ai-tab" data-bs-toggle="tab" data-bs-target="#aiTabPane" type="button" role="tab" aria-selected="false">
+        <i class="bi bi-robot me-1"></i> AI Intelligence
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link fw-semibold" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notificationsTabPane" type="button" role="tab" aria-selected="false">
+        <i class="bi bi-bell me-1"></i> Notifications
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link fw-semibold" id="appearance-tab" data-bs-toggle="tab" data-bs-target="#appearanceTabPane" type="button" role="tab" aria-selected="false">
+        <i class="bi bi-palette me-1"></i> Appearance
+      </button>
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="tab-content" id="settingsTabContent">
+    <!-- Account Settings -->
+    <div class="tab-pane fade show active" id="accountTabPane" role="tabpanel" aria-labelledby="account-tab">
+      <div class="card p-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h5 class="fw-bold mb-0">Profile Information</h5>
+          <a href="{% url 'accounts:profile' %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-person-badge me-1"></i> Full Profile Page
+          </a>
+        </div>
+
+        <form method="POST" action="{% url 'dashboard:settings' %}" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Primary Email Address</label>
+            <input type="email" class="form-control bg-body-tertiary" value="{{ user.email }}" readonly>
+            <small class="text-muted">Email is your unique authentication identifier and cannot be modified directly.</small>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Display Name</label>
+            {{ form.display_name }}
+            <small class="text-muted">Displayed in greetings, top navigation bar, and generated AI signatures.</small>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Timezone</label>
+              {{ form.timezone }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Default Theme</label>
+              {{ form.theme }}
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label small fw-semibold">Profile Avatar</label>
+            {{ form.avatar }}
+            <small class="text-muted">JPG, PNG, or WEBP under 2MB.</small>
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check2 me-1"></i> Save Changes
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Gmail Integration -->
+    <div class="tab-pane fade" id="gmailTabPane" role="tabpanel" aria-labelledby="gmail-tab">
+      <div class="card p-4">
+        <h5 class="fw-bold mb-2">Gmail Service Connection</h5>
+        <p class="text-muted small mb-4">Authorize read and triage access to your Gmail account via OAuth 2.0</p>
+
+        <!-- Status Card -->
+        <div class="p-3 bg-body-tertiary rounded border mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="rounded bg-white p-2 border shadow-sm">
+              <svg width="26" height="26" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+              </svg>
+            </div>
+            <div>
+              <div class="d-flex align-items-center gap-2">
+                <span class="fw-semibold">Gmail Account</span>
+                <span class="badge {{ gmail_status.badge_class }}">
+                  ● {{ gmail_status.label }}
+                </span>
+              </div>
+              {% if gmail_status.status == 'connected' %}
+                <div class="text-body small mt-1">
+                  <strong>Gmail:</strong> {{ gmail_status.email }}
+                  {% if gmail_status.connected_at %}
+                    &bull; <strong>Connected:</strong> {{ gmail_status.connected_at|date:"d M Y" }}
+                  {% endif %}
+                </div>
+                <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+                  <span class="badge bg-success-subtle text-success border border-success-subtle small">
+                    <i class="bi bi-check-circle me-1"></i> Email Reading Enabled
+                  </span>
+                  {% if gmail_status.has_send_permission %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle small">
+                      <i class="bi bi-send-check me-1"></i> Gmail Sending Enabled
+                    </span>
+                  {% else %}
+                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle small">
+                      <i class="bi bi-exclamation-triangle me-1"></i> Gmail Sending Permission Required
+                    </span>
+                    <a href="{% url 'gmail:authorize_send' %}" class="btn btn-warning btn-sm py-0 px-2 fw-semibold" style="font-size: 0.75rem;">
+                      <i class="bi bi-key-fill me-1"></i> Grant Sending Permission
+                    </a>
+                  {% endif %}
+                </div>
+              {% else %}
+                <div class="text-muted small mt-1">No active Google mailbox linked to this workspace</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            {% if gmail_status.status == 'connected' and not gmail_status.has_send_permission %}
+              <a href="{% url 'gmail:authorize_send' %}" class="btn btn-warning btn-sm fw-semibold">
+                <i class="bi bi-key-fill me-1"></i> Grant Sending Permission
+              </a>
+            {% endif %}
+            <a href="{% url 'settings_gmail' %}" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-gear me-1"></i> Manage Account
+            </a>
+            {% if gmail_status.status == 'connected' %}
+              <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#disconnectGmailModal">
+                <i class="bi bi-x-circle me-1"></i> Disconnect Gmail
+              </button>
+            {% else %}
+              <a href="{% url 'gmail:connect' %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-link-45deg me-1"></i> Connect Gmail
+              </a>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="p-3 border rounded small text-muted">
+          <div class="fw-bold text-body mb-1"><i class="bi bi-shield-check text-primary me-1"></i> Gmail Security & Data Retention:</div>
+          <div>We only access the authorized mailbox via Google OAuth 2.0. Passwords and credentials are never stored. Disconnecting Gmail stops external synchronization while preserving your existing local email records.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Security Tab -->
+    <div class="tab-pane fade" id="securityTabPane" role="tabpanel" aria-labelledby="security-tab">
+      <div class="card p-4">
+        <h5 class="fw-bold mb-3">Security & Access Controls</h5>
+
+        <div class="d-flex align-items-center justify-content-between p-3 bg-body-tertiary rounded border mb-3">
+          <div>
+            <div class="fw-semibold">Password Management</div>
+            <div class="text-muted small">Update your account password regularly to keep your workspace secure.</div>
+          </div>
+          <a href="{% url 'accounts:password_change' %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-key me-1"></i> Change Password
+          </a>
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between p-3 bg-body-tertiary rounded border mb-4">
+          <div>
+            <div class="fw-semibold">Forgot or Reset Password</div>
+            <div class="text-muted small">Send password recovery link to your registered email address.</div>
+          </div>
+          <a href="{% url 'password_reset' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-envelope-open me-1"></i> Password Reset
+          </a>
+        </div>
+
+        <!-- Danger Zone: Delete Account -->
+        <div class="pt-4 border-top">
+          <h6 class="fw-bold text-danger mb-2"><i class="bi bi-exclamation-triangle-fill me-1"></i> Danger Zone</h6>
+          <div class="d-flex align-items-center justify-content-between p-3 border border-danger-subtle rounded bg-danger-subtle bg-opacity-25">
+            <div>
+              <div class="fw-semibold text-danger">Delete Workspace Account</div>
+              <div class="text-muted small">Permanently delete your profile and all associated local emails. This action cannot be undone.</div>
+            </div>
+            <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+              <i class="bi bi-trash3 me-1"></i> Delete Account
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Intelligence -->
+    <div class="tab-pane fade" id="aiTabPane" role="tabpanel" aria-labelledby="ai-tab">
+      <div class="card p-4">
+        <h5 class="fw-bold mb-2">AI Engine Settings</h5>
+        <p class="text-muted small mb-4">Configure LLM providers, ultra-fast Groq LPU inference, and automated classification</p>
+
+        <!-- Provider Status Cards -->
+        <div class="row g-3 mb-4">
+          <!-- Groq Provider Card -->
+          <div class="col-12 col-md-6">
+            <div class="p-3 rounded border {% if groq_configured %}bg-success-subtle border-success-subtle{% else %}bg-body-tertiary border-warning-subtle{% endif %}">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="fw-bold text-dark d-flex align-items-center gap-2">
+                  <i class="bi bi-cpu text-primary"></i> Groq LPU Inference
+                </span>
+                {% if groq_configured %}
+                  <span class="badge bg-success text-white"><i class="bi bi-check-circle me-1"></i>Active / Configured</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Key Needed in .env</span>
+                {% endif %}
+              </div>
+              <div class="small text-muted mb-1">Model: <code>{{ groq_model }}</code></div>
+              <p class="small text-muted mb-0" style="font-size: 0.78rem;">
+                Blazing fast inference (300–800 tok/s). Set <code>GROQ_API_KEY</code> in your <code>.env</code> file to enable instant AI email analysis and response drafting.
+              </p>
+            </div>
+          </div>
+
+          <!-- OpenAI Provider Card -->
+          <div class="col-12 col-md-6">
+            <div class="p-3 rounded border {% if openai_configured %}bg-primary-subtle border-primary-subtle{% else %}bg-body-tertiary{% endif %}">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="fw-bold text-dark d-flex align-items-center gap-2">
+                  <i class="bi bi-robot text-primary"></i> OpenAI Compatible
+                </span>
+                {% if openai_configured %}
+                  <span class="badge bg-primary text-white"><i class="bi bi-check-circle me-1"></i>Configured</span>
+                {% else %}
+                  <span class="badge bg-secondary text-white">Not Configured</span>
+                {% endif %}
+              </div>
+              <div class="small text-muted mb-1">Model: <code>{{ ai_model }}</code></div>
+              <p class="small text-muted mb-0" style="font-size: 0.78rem;">
+                Supports GPT-4o-mini, Azure OpenAI, OpenRouter, and Ollama via <code>AI_API_KEY</code> in <code>.env</code>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Settings Form -->
+        <form method="POST" action="{% url 'dashboard:settings' %}">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="ai_settings">
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">Primary Default Provider</label>
+              <select name="ai_provider" class="form-select form-select-sm">
+                <option value="groq" {% if ai_provider == 'groq' %}selected{% endif %}>Groq LPU (Ultra-Fast & Free - Recommended)</option>
+                <option value="openai" {% if ai_provider == 'openai' %}selected{% endif %}>OpenAI Compatible</option>
+              </select>
+              <small class="text-muted">Primary engine used for triage, analyzer, and reply drafting.</small>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">Groq Model</label>
+              <select name="groq_model" class="form-select form-select-sm">
+                <option value="openai/gpt-oss-120b" {% if groq_model == 'openai/gpt-oss-120b' %}selected{% endif %}>GPT-OSS 120B (Recommended - High Reasoning)</option>
+                <option value="openai/gpt-oss-20b" {% if groq_model == 'openai/gpt-oss-20b' %}selected{% endif %}>GPT-OSS 20B (Ultra-Fast Lightweight)</option>
+                <option value="qwen/qwen3.8-27b" {% if groq_model == 'qwen/qwen3.8-27b' %}selected{% endif %}>Qwen 3.8 27B</option>
+                <option value="llama-3.3-70b-versatile" {% if groq_model == 'llama-3.3-70b-versatile' %}selected{% endif %}>Llama 3.3 70B Versatile</option>
+                <option value="llama-3.1-8b-instant" {% if groq_model == 'llama-3.1-8b-instant' %}selected{% endif %}>Llama 3.1 8B Instant</option>
+              </select>
+              <small class="text-muted">Runs on Groq LPU with automatic model failover.</small>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold d-flex justify-content-between">
+              <span>Groq API Key (<code>GROQ_API_KEY</code>)</span>
+              <a href="https://console.groq.com/keys" target="_blank" rel="noopener" class="text-decoration-none small">
+                <i class="bi bi-box-arrow-up-right me-1"></i>Get Free Groq Key
+              </a>
+            </label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text"><i class="bi bi-key text-primary"></i></span>
+              <input type="password" name="groq_api_key" id="groqApiKeyInput" class="form-control" placeholder="{% if groq_configured %}•••••••••••••••••••• (Leave blank to keep existing){% else %}gsk_...{% endif %}">
+              <button class="btn btn-outline-secondary" type="button" id="toggleGroqKeyBtn">
+                <i class="bi bi-eye" id="toggleGroqKeyIcon"></i>
+              </button>
+            </div>
+            <small class="text-muted">
+              Free tier includes generous rate limits with zero credit card required.
+            </small>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label small fw-semibold">OpenAI API Key (<code>AI_API_KEY</code>)</label>
+            <input type="password" name="openai_api_key" class="form-control form-control-sm" placeholder="{% if openai_configured %}•••••••••••••••••••• (Leave blank to keep existing){% else %}sk-...{% endif %}">
+            <small class="text-muted">Used for OpenAI GPT-4o-mini or hybrid failover.</small>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-sm px-4">
+            <i class="bi bi-check2-circle me-1"></i> Save AI Engine Settings
+          </button>
+        </form>
+
+        <div class="p-3 bg-body-tertiary rounded small border mt-4">
+          <div class="fw-semibold text-body mb-1"><i class="bi bi-shield-check text-primary me-1"></i> Persistence Note:</div>
+          <div>Saved keys and settings are persisted directly to your server <code>.env</code> file and applied to runtime memory immediately.</div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Notifications -->
+    <div class="tab-pane fade" id="notificationsTabPane" role="tabpanel" aria-labelledby="notifications-tab">
+      <div class="card p-4">
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <div>
+            <h5 class="fw-bold mb-1">Notification & Alert Settings</h5>
+            <p class="text-muted small mb-0">Configure real-time desktop alerts, sound chimes, VIP sender triggers, and Web Push</p>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="sendTestNotifBtn">
+            <i class="bi bi-bell-fill me-1"></i> Send Test Notification
+          </button>
+        </div>
+
+        <!-- Browser Permission Status Card -->
+        <div class="p-3 mb-4 rounded border bg-body-tertiary">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+              <div class="fw-semibold mb-1">
+                <i class="bi bi-window-desktop me-1 text-primary"></i> Browser Desktop Notifications
+              </div>
+              <div class="small text-muted">Allow system notification banners directly on your operating system desktop</div>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+              <span id="browserPermissionStatus">
+                <span class="badge bg-secondary-subtle text-secondary px-2 py-1">Checking...</span>
+              </span>
+              <button type="button" class="btn btn-sm btn-primary" id="enableBrowserNotifBtn">
+                Enable Notifications
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <form method="POST" action="{% url 'settings_notifications' %}">
+          {% csrf_token %}
+
+          <div class="d-flex flex-column gap-3 mb-4">
+            <!-- Important Senders -->
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="important_sender_enabled" id="notifImportantSender" {% if user_notif_pref.important_sender_enabled %}checked{% endif %}>
+              <label class="form-check-label fw-semibold small" for="notifImportantSender">Important Sender Alerts</label>
+              <div class="text-muted small">Immediately alert when emails from your configured VIP senders arrive</div>
+            </div>
+
+            <!-- AI Important -->
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="ai_important_enabled" id="notifAIImportant" {% if user_notif_pref.ai_important_enabled %}checked{% endif %}>
+              <label class="form-check-label fw-semibold small" for="notifAIImportant">AI Important Email Alerts</label>
+              <div class="text-muted small">Receive notifications when AI intelligence categorizes incoming mail as high-importance</div>
+            </div>
+
+            <!-- General Important Emails -->
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="important_email_enabled" id="notifImportant" {% if user_notif_pref.important_email_enabled %}checked{% endif %}>
+              <label class="form-check-label fw-semibold small" for="notifImportant">Master Importance Trigger</label>
+              <div class="text-muted small">Master toggle enabling notifications across all important mail flows</div>
+            </div>
+
+            <!-- Desktop Browser -->
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="browser_enabled" id="notifBrowser" {% if user_notif_pref.browser_enabled %}checked{% endif %}>
+              <label class="form-check-label fw-semibold small" for="notifBrowser">HTML5 Desktop Browser Notifications</label>
+              <div class="text-muted small">Render native OS banners when new urgent mail arrives while browser is open</div>
+            </div>
+
+            <!-- Mobile Push -->
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="push_enabled" id="notifPush" {% if user_notif_pref.push_enabled %}checked{% endif %}>
+              <label class="form-check-label fw-semibold small" for="notifPush">Mobile & PWA Web Push</label>
+              <div class="text-muted small">Deliver notifications via Service Worker to registered mobile browsers & devices</div>
+            </div>
+
+            <!-- Sound Chime -->
+            <div class="form-check form-switch">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <input class="form-check-input" type="checkbox" name="sound_enabled" id="notifSound" {% if user_notif_pref.sound_enabled %}checked{% endif %}>
+                  <label class="form-check-label fw-semibold small" for="notifSound">Audible Chime on Arrival</label>
+                  <div class="text-muted small">Play synthesized harmonic alert on urgent mail receipt</div>
+                </div>
+                <button type="button" class="btn btn-xs btn-outline-secondary ms-2" id="previewSoundBtn" style="font-size: 0.75rem; padding: 2px 8px;">
+                  <i class="bi bi-volume-up me-1"></i> Preview Sound
+                </button>
+              </div>
+            </div>
+
+            <!-- Gmail Important Label -->
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="gmail_important_enabled" id="notifGmail" {% if user_notif_pref.gmail_important_enabled %}checked{% endif %}>
+              <label class="form-check-label fw-semibold small" for="notifGmail">Gmail Native Important Label Alerts</label>
+              <div class="text-muted small">Notify on emails marked IMPORTANT by Google's native algorithms</div>
+            </div>
+
+            <!-- Pinned Email -->
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="notify_pinned_enabled" id="notifPinned" {% if user_notif_pref.notify_pinned_enabled %}checked{% endif %}>
+              <label class="form-check-label fw-semibold small" for="notifPinned">Pinned Email Notifications</label>
+              <div class="text-muted small">Generate alert card when you pin an email to your workspace</div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-3">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check2 me-1"></i> Save Notification Preferences
+            </button>
+            <span class="text-muted small">Settings take effect immediately for new correspondence.</span>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Appearance -->
+    <div class="tab-pane fade" id="appearanceTabPane" role="tabpanel" aria-labelledby="appearance-tab">
+      <div class="card p-4">
+        <h5 class="fw-bold mb-3">Appearance & Interface Theme</h5>
+        <p class="text-muted small mb-4">Customize visual aesthetics and theme persistence</p>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="card p-3 text-center border cursor-pointer" onclick="document.documentElement.setAttribute('data-bs-theme', 'light'); localStorage.setItem('ai_mail_theme', 'light'); window.showToast('Theme', 'Light Mode activated', 'info');">
+              <i class="bi bi-sun fs-2 text-warning mb-2"></i>
+              <h6 class="fw-bold mb-1">Light Mode</h6>
+              <p class="text-muted small mb-0">Clean slate and crisp contrast</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card p-3 text-center border cursor-pointer" onclick="document.documentElement.setAttribute('data-bs-theme', 'dark'); localStorage.setItem('ai_mail_theme', 'dark'); window.showToast('Theme', 'Dark Mode activated', 'info');">
+              <i class="bi bi-moon-stars fs-2 text-primary mb-2"></i>
+              <h6 class="fw-bold mb-1">Dark Mode</h6>
+              <p class="text-muted small mb-0">Deep navy and slate SaaS palette</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Disconnect Gmail Confirmation Modal -->
+<div class="modal fade" id="disconnectGmailModal" tabindex="-1" aria-labelledby="disconnectGmailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="disconnectGmailModalLabel">Disconnect Gmail Account?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to disconnect <strong>{{ gmail_status.email }}</strong> from AI Smart Mail Manager?</p>
+        <p class="text-muted small mb-0">
+          <i class="bi bi-info-circle text-primary me-1"></i>
+          Disconnecting stops future mail fetching. Your existing local email records, summaries, and priority tags will be safely preserved.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" action="{% url 'gmail:disconnect' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-x-circle me-1"></i> Confirm Disconnect
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Account Confirmation Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-danger">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title fw-bold" id="deleteAccountModalLabel"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirm Account Deletion</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Warning:</strong> You are about to permanently delete your account and all associated workspace data.</p>
+        <p class="text-muted small mb-0">This operation cannot be reversed. Please confirm if you wish to proceed.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Account</button>
+        <form method="POST" action="{% url 'accounts:delete' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash3 me-1"></i> Permanently Delete
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const toggleBtn = document.getElementById('toggleGroqKeyBtn');
+    const input = document.getElementById('groqApiKeyInput');
+    const icon = document.getElementById('toggleGroqKeyIcon');
+    if (toggleBtn && input && icon) {
+      toggleBtn.addEventListener('click', function() {
+        if (input.type === 'password') {
+          input.type = 'text';
+          icon.classList.remove('bi-eye');
+          icon.classList.add('bi-eye-slash');
+        } else {
+          input.type = 'password';
+          icon.classList.remove('bi-eye-slash');
+          icon.classList.add('bi-eye');
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

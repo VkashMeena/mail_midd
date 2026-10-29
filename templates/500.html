@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-center py-5">
+  <div class="card p-5 text-center shadow-sm" style="max-width: 520px; width: 100%;">
+    <div class="rounded-circle bg-warning-subtle text-warning mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 72px; height: 72px;">
+      <i class="bi bi-shield-exclamation fs-1"></i>
+    </div>
+    <h1 class="display-5 fw-bold text-body mb-2">500</h1>
+    <h5 class="fw-semibold mb-3">Internal System Error</h5>
+    <p class="text-muted mb-4">
+      An unexpected condition was encountered on the server. Our development logs have recorded the occurrence.
+    </p>
+    <div class="d-flex justify-content-center gap-2">
+      <a href="{% url 'dashboard' %}" class="btn btn-primary">
+        <i class="bi bi-arrow-clockwise me-1"></i> Return to Safety
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

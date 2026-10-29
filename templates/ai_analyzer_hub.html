@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex flex-column gap-4">
+  <!-- Header -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <h3 class="fw-bold mb-0">AI Email Analyzer Hub</h3>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+          <i class="bi bi-cpu-fill me-1"></i>Powered by Groq LPU
+        </span>
+        <span class="badge bg-secondary-subtle text-secondary">
+          {{ groq_model }}
+        </span>
+      </div>
+      <p class="text-muted small mb-0 mt-1">Multi-dimensional email intelligence: objective extraction, action checklists, sentiment triage, deadline detection, and response angles.</p>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <a href="{% url 'inbox' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-inbox me-1"></i> Inbox
+      </a>
+      <a href="{% url 'ai_reply' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-robot me-1"></i> AI Reply Studio
+      </a>
+    </div>
+  </div>
+
+  <!-- Messages Alert -->
+  {% if messages %}
+    <div>
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Main Grid -->
+  <div class="row g-4">
+    <!-- Left Column: Email Selector & Recent Analyses List -->
+    <div class="col-12 col-lg-5">
+      <div class="card h-100 p-4 shadow-sm d-flex flex-column gap-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-envelope-paper text-primary"></i> Select Email
+          </h5>
+          <span class="badge bg-light text-muted border small">{{ total_analyzed }} Analyzed</span>
+        </div>
+
+        <!-- Email Selector Dropdown -->
+        <div>
+          <label for="analyzerEmailSelector" class="form-label small fw-semibold">Choose an email to inspect or analyze:</label>
+          <select id="analyzerEmailSelector" class="form-select form-select-sm" onchange="if(this.value) window.location.href='{% url 'ai_analyzer' %}?email_id=' + this.value;">
+            {% for em in emails %}
+              <option value="{{ em.id }}" {% if selected_email and em.id == selected_email.id %}selected{% endif %}>
+                {{ em.effective_sender_name|default:em.sender_email }} — {{ em.subject|truncatechars:35 }} ({{ em.received_at|date:"M d" }})
+              </option>
+            {% empty %}
+              <option value="">No emails available</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Email Quick Feed List -->
+        <div class="flex-grow-1 overflow-auto" style="max-height: 480px;">
+          <div class="list-group list-group-flush small">
+            {% for em in emails %}
+              <a href="{% url 'ai_analyzer' %}?email_id={{ em.id }}" class="list-group-item list-group-item-action px-3 py-2 border rounded mb-2 {% if selected_email and em.id == selected_email.id %}active bg-primary-subtle text-dark border-primary{% endif %}">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="fw-bold text-truncate" style="max-width: 65%;">{{ em.effective_sender_name|default:em.sender_email }}</span>
+                  <small class="text-muted">{{ em.received_at|date:"M d" }}</small>
+                </div>
+                <div class="text-truncate fw-medium mb-1">{{ em.subject }}</div>
+                <div class="d-flex align-items-center gap-1 flex-wrap">
+                  <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.7rem;">{{ em.effective_category }}</span>
+                  {% if em.analysis %}
+                    <span class="badge bg-success-subtle text-success" style="font-size: 0.7rem;"><i class="bi bi-check-circle me-1"></i>Analyzed</span>
+                    {% if em.analysis.action_required %}
+                      <span class="badge bg-danger-subtle text-danger" style="font-size: 0.7rem;"><i class="bi bi-lightning-charge me-1"></i>Action Req.</span>
+                    {% endif %}
+                  {% else %}
+                    <span class="badge bg-warning-subtle text-warning" style="font-size: 0.7rem;">Pending AI</span>
+                  {% endif %}
+                </div>
+              </a>
+            {% empty %}
+              <div class="text-center py-4 text-muted">No emails found.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Deep Intelligence Card -->
+    <div class="col-12 col-lg-7">
+      <div class="card h-100 p-4 shadow-sm d-flex flex-column gap-3">
+        {% if selected_email %}
+          <!-- Selected Email Header & Controls -->
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 border-bottom pb-3">
+            <div>
+              <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                <h5 class="fw-bold mb-0 text-dark">{{ selected_email.subject }}</h5>
+              </div>
+              <small class="text-muted">From: {{ selected_email.effective_sender_name|default:selected_email.sender_name }} &lt;{{ selected_email.sender_email }}&gt; &bull; {{ selected_email.received_at|date:"M d, Y h:i A" }}</small>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+              <form method="POST" action="{% url 'email_analyze' selected_email.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-sm px-3 shadow-sm fw-semibold">
+                  <i class="bi bi-stars me-1"></i> {% if analysis %}Re-analyze with Groq{% else %}Analyze with Groq AI{% endif %}
+                </button>
+              </form>
+              <a href="{% url 'email_reply' selected_email.id %}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-robot me-1"></i> Reply
+              </a>
+            </div>
+          </div>
+
+          {% if analysis %}
+            <!-- Analysis Breakdown -->
+            <div class="d-flex flex-column gap-3">
+              <!-- Objective Box -->
+              <div class="p-3 bg-body-tertiary rounded-3 border">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="small fw-bold text-uppercase text-secondary tracking-wider">
+                    <i class="bi bi-bullseye text-primary me-1"></i> Primary Objective
+                  </span>
+                  <div class="d-flex align-items-center gap-2">
+                    {% if analysis.action_required %}
+                      <span class="badge bg-danger text-white"><i class="bi bi-lightning-charge-fill me-1"></i>Action Required</span>
+                    {% endif %}
+                    <span class="badge bg-secondary-subtle text-secondary">{{ analysis.model_name }}</span>
+                  </div>
+                </div>
+                <p class="fs-6 fw-semibold text-body mb-1">{{ analysis.objective }}</p>
+                {% if analysis.reason %}
+                  <small class="text-muted d-block">{{ analysis.reason }}</small>
+                {% endif %}
+              </div>
+
+              <!-- Metrics Chips -->
+              <div class="row g-2">
+                <div class="col-6 col-md-3">
+                  <div class="p-2 border rounded bg-body text-center">
+                    <small class="text-muted d-block" style="font-size: 0.72rem;">CATEGORY</small>
+                    <span class="fw-bold text-primary small">{{ analysis.category }}</span>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="p-2 border rounded bg-body text-center">
+                    <small class="text-muted d-block" style="font-size: 0.72rem;">PRIORITY</small>
+                    <span class="fw-bold {% if analysis.priority == 'High' %}text-danger{% elif analysis.priority == 'Medium' %}text-warning{% else %}text-secondary{% endif %} small">{{ analysis.priority }}</span>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="p-2 border rounded bg-body text-center">
+                    <small class="text-muted d-block" style="font-size: 0.72rem;">URGENCY</small>
+                    <span class="fw-bold text-body small">{{ analysis.urgency|default:"Moderate" }}</span>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="p-2 border rounded bg-body text-center">
+                    <small class="text-muted d-block" style="font-size: 0.72rem;">SENTIMENT</small>
+                    <span class="fw-bold text-info-emphasis small">{{ analysis.sentiment|default:"Professional" }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Items & Key Points Grid -->
+              <div class="row g-3">
+                <!-- Action Items Required -->
+                <div class="col-12 col-md-6">
+                  <div class="border rounded p-3 h-100 bg-body">
+                    <div class="fw-bold small text-secondary text-uppercase tracking-wider mb-2 d-flex align-items-center gap-1">
+                      <i class="bi bi-list-task text-danger"></i> Action Items Required
+                    </div>
+                    {% if analysis.action_items %}
+                      <ul class="list-unstyled mb-0 d-flex flex-column gap-2 small">
+                        {% for item in analysis.action_items %}
+                          <li class="d-flex align-items-start gap-2 p-2 bg-body-tertiary rounded border">
+                            <i class="bi bi-square text-danger mt-1 flex-shrink-0"></i>
+                            <span class="fw-medium text-body">{{ item }}</span>
+                          </li>
+                        {% endfor %}
+                      </ul>
+                    {% else %}
+                      <p class="small text-muted mb-0">No direct action required from recipient.</p>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <!-- Key Takeaways -->
+                <div class="col-12 col-md-6">
+                  <div class="border rounded p-3 h-100 bg-body">
+                    <div class="fw-bold small text-secondary text-uppercase tracking-wider mb-2 d-flex align-items-center gap-1">
+                      <i class="bi bi-check2-circle text-success"></i> Key Takeaways
+                    </div>
+                    {% if analysis.key_points %}
+                      <ul class="list-unstyled mb-0 d-flex flex-column gap-2 small">
+                        {% for pt in analysis.key_points %}
+                          <li class="d-flex align-items-start gap-2">
+                            <i class="bi bi-arrow-right-short text-primary fs-5 lh-1 flex-shrink-0"></i>
+                            <span>{{ pt }}</span>
+                          </li>
+                        {% endfor %}
+                      </ul>
+                    {% else %}
+                      <p class="small text-muted mb-0">No specific points extracted.</p>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Extracted Deadlines / Schedules -->
+              {% if analysis.extracted_deadlines %}
+                <div class="border rounded p-3 bg-danger-subtle border-danger-subtle">
+                  <div class="fw-bold small text-danger text-uppercase tracking-wider mb-2 d-flex align-items-center gap-1">
+                    <i class="bi bi-calendar-event"></i> Detected Schedules & Deadlines
+                  </div>
+                  <div class="d-flex flex-wrap gap-2">
+                    {% for dl in analysis.extracted_deadlines %}
+                      <span class="badge bg-white text-danger border border-danger-subtle px-2 py-1 fs-6">
+                        <i class="bi bi-clock me-1"></i>{{ dl }}
+                      </span>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+
+              <!-- Suggested Response Hooks -->
+              {% if analysis.suggested_reply_hooks %}
+                <div class="border rounded p-3 bg-body">
+                  <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fw-bold small text-secondary text-uppercase tracking-wider">
+                      <i class="bi bi-chat-quote text-primary me-1"></i> Suggested Response Hooks
+                    </span>
+                    <a href="{% url 'email_reply' selected_email.id %}" class="small text-decoration-none">AI Reply Studio &rarr;</a>
+                  </div>
+                  <div class="d-flex flex-column gap-2">
+                    {% for hook in analysis.suggested_reply_hooks %}
+                      <div class="p-2 bg-body-tertiary rounded border d-flex align-items-center justify-content-between gap-2">
+                        <div class="d-flex align-items-start gap-2">
+                          <i class="bi bi-lightbulb text-warning mt-1 flex-shrink-0"></i>
+                          <span class="small text-body">{{ hook }}</span>
+                        </div>
+                        <a href="{% url 'email_reply' selected_email.id %}?instruction={{ hook|urlencode }}" class="btn btn-sm btn-outline-primary py-0 px-2 flex-shrink-0" style="font-size: 0.78rem;">
+                          Draft Reply
+                        </a>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+
+          {% else %}
+            <!-- Not Yet Analyzed State -->
+            <div class="p-5 text-center bg-body-tertiary rounded-3 border my-auto">
+              <i class="bi bi-cpu fs-1 text-primary mb-3 d-block"></i>
+              <h5>This email has not been deeply analyzed yet</h5>
+              <p class="text-muted small mb-3">Extract objective, sentiment, key points, action items, and reply hooks instantly with Groq LPU.</p>
+              <form method="POST" action="{% url 'email_analyze' selected_email.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                  <i class="bi bi-stars me-1"></i> Analyze with Groq AI
+                </button>
+              </form>
+            </div>
+          {% endif %}
+
+        {% else %}
+          <div class="p-5 text-center text-muted my-auto">
+            <i class="bi bi-inbox fs-1 mb-2 d-block"></i>
+            <h5>No Email Selected</h5>
+            <p class="small">Choose an email from the left sidebar to inspect AI intelligence.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

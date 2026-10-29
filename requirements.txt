@@ -1,0 +1,20 @@
+# AI Smart Mail Manager - Production & Core Dependencies
+Django>=5.0,<5.2
+daphne>=4.1.0
+channels>=4.0.0
+channels-redis>=4.2.0
+celery>=5.4.0
+redis>=5.0.0
+whitenoise>=6.6.0
+psycopg2-binary>=2.9.9
+dj-database-url>=2.1.0
+google-api-python-client>=2.100.0
+google-auth>=2.23.0
+google-auth-oauthlib>=1.1.0
+cryptography>=42.0.0
+python-dotenv>=1.0.1
+bleach>=6.1.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+pytz>=2024.1
+pywebpush>=1.14.0

@@ -1,0 +1,133 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — AI Smart Mail Manager</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <style>
+    body {
+      background-color: var(--background);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .auth-card {
+      max-width: 440px;
+      width: 100%;
+      border-radius: 14px;
+      box-shadow: var(--shadow-lg);
+    }
+    .btn-google {
+      background-color: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .btn-google:hover {
+      background-color: var(--surface-hover);
+      border-color: #cbd5e1;
+      color: var(--text);
+    }
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      margin: 1.25rem 0;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--border);
+    }
+    .auth-divider::before { margin-right: .75em; }
+    .auth-divider::after { margin-left: .75em; }
+  </style>
+</head>
+<body>
+  <div class="auth-card card p-4 p-md-5">
+    <!-- Brand Header -->
+    <div class="text-center mb-4">
+      <div class="brand-icon-box mx-auto mb-2" style="width: 44px; height: 44px;">
+        <i class="bi bi-envelope-at-fill fs-4"></i>
+      </div>
+      <h4 class="fw-bold mb-1">Welcome back</h4>
+      <p class="text-muted small">Access your intelligent AI email workspace</p>
+    </div>
+
+    <!-- Django Messages -->
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show py-2 px-3 small" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Google Sign-In Option -->
+    <div class="mb-3">
+      <a href="{% url 'accounts:google_login' %}" class="btn btn-google w-100 py-2 d-flex align-items-center justify-content-center gap-2">
+        <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+        </svg>
+        <span>Sign in with Google</span>
+      </a>
+    </div>
+
+    <div class="auth-divider">or sign in with credentials</div>
+
+    <!-- Standard Login Form -->
+    <form method="POST" action="{% url 'accounts:login' %}">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="username" class="form-label small fw-semibold">Username or Email</label>
+        {{ form.username }}
+      </div>
+
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <label for="password" class="form-label small fw-semibold mb-0">Password</label>
+          <a href="#" class="small text-decoration-none" onclick="alert('Password reset is available via the Django Admin or when mail synchronization is active.'); return false;">Forgot password?</a>
+        </div>
+        {{ form.password }}
+      </div>
+
+      <div class="mb-3 form-check">
+        {{ form.remember_me }}
+        <label class="form-check-label small text-muted" for="rememberMe">Remember me on this browser</label>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+      </button>
+    </form>
+
+    <!-- Demo Credentials Helper Callout -->
+    <div class="mt-4 p-3 bg-body-tertiary rounded border small text-muted">
+      <div class="fw-semibold text-body mb-1"><i class="bi bi-info-circle text-primary me-1"></i> Quick Demo Access:</div>
+      <div>Run <code>python manage.py seed_demo_data</code> to seed credentials:</div>
+      <div class="mt-1">Username: <strong>demo</strong> &bull; Password: <strong>demo12345</strong></div>
+    </div>
+
+    <!-- Sign up redirect -->
+    <div class="text-center mt-4 small text-muted">
+      Don't have an account yet?
+      <a href="{% url 'accounts:register' %}" class="fw-semibold text-decoration-none">Create an account</a>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

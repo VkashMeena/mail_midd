@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex flex-column gap-3">
+  <!-- Header -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+      <div class="d-flex align-items-center gap-2">
+        <h3 class="fw-bold mb-1">Notification Center</h3>
+        {% if unread_count > 0 %}
+          <span class="badge bg-warning text-dark">{{ unread_count }} Unread</span>
+        {% endif %}
+      </div>
+      <p class="text-muted small mb-0">Real-time alerts for priority senders, AI intelligence tags, and workspace updates</p>
+    </div>
+
+    <!-- Actions Toolbar -->
+    <div class="d-flex align-items-center gap-2">
+      <a href="{% url 'settings' %}#notificationsTabPane" class="btn btn-outline-secondary btn-sm" title="Configure Notification Preferences">
+        <i class="bi bi-gear me-1"></i> Preferences
+      </a>
+      {% if unread_count > 0 %}
+        <form method="POST" action="{% url 'notifications:mark_all_read' %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-check2-all me-1"></i> Mark All Read
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Search & Filter Bar -->
+  <div class="card p-3 bg-body-tertiary border-0">
+    <div class="row g-2 align-items-center">
+      <div class="col-md-6 col-lg-5">
+        <form method="GET" action="{% url 'notifications' %}" class="d-flex gap-2">
+          <input type="hidden" name="tab" value="{{ current_tab|default:'all' }}">
+          <div class="input-group input-group-sm">
+            <span class="input-group-text bg-body"><i class="bi bi-search"></i></span>
+            <input
+              type="search"
+              name="q"
+              class="form-control"
+              placeholder="Search notifications..."
+              value="{{ search_query|default:'' }}"
+            >
+            {% if search_query %}
+              <a href="?tab={{ current_tab }}" class="btn btn-outline-secondary" title="Clear Search">
+                <i class="bi bi-x"></i>
+              </a>
+            {% endif %}
+            <button class="btn btn-primary" type="submit">Search</button>
+          </div>
+        </form>
+      </div>
+      <div class="col-md-6 col-lg-7 text-md-end text-muted small">
+        {% if search_query %}
+          <span>Showing results matching "<strong>{{ search_query }}</strong>"</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <ul class="nav nav-pills border-bottom pb-2 gap-1 flex-wrap">
+    <li class="nav-item">
+      <a class="nav-link {% if current_tab == 'all' or not current_tab %}active{% endif %}" href="?tab=all{% if search_query %}&q={{ search_query }}{% endif %}">
+        All Alerts <span class="badge bg-secondary-subtle text-secondary ms-1">{{ all_count }}</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if current_tab == 'unread' %}active{% endif %}" href="?tab=unread{% if search_query %}&q={{ search_query }}{% endif %}">
+        Unread <span class="badge bg-primary-subtle text-primary ms-1">{{ unread_count }}</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if current_tab == 'important' %}active{% endif %}" href="?tab=important{% if search_query %}&q={{ search_query }}{% endif %}">
+        <i class="bi bi-exclamation-triangle text-danger me-1"></i> Important <span class="badge bg-danger-subtle text-danger ms-1">{{ important_count }}</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if current_tab == 'senders' %}active{% endif %}" href="?tab=senders{% if search_query %}&q={{ search_query }}{% endif %}">
+        <i class="bi bi-person-star text-warning me-1"></i> Important Senders <span class="badge bg-warning-subtle text-warning ms-1">{{ sender_count }}</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if current_tab == 'ai' %}active{% endif %}" href="?tab=ai{% if search_query %}&q={{ search_query }}{% endif %}">
+        <i class="bi bi-robot text-primary me-1"></i> AI Important <span class="badge bg-info-subtle text-info ms-1">{{ ai_count }}</span>
+      </a>
+    </li>
+  </ul>
+
+  <!-- Notifications List -->
+  {% if notifications %}
+    <div class="d-flex flex-column gap-2 mt-2" id="notificationsContainer">
+      {% for notif in notifications %}
+        {% include 'components/notification_item.html' with notif=notif %}
+      {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+      <nav class="d-flex justify-content-center mt-3" aria-label="Notifications pagination">
+        <ul class="pagination pagination-sm mb-0">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}&tab={{ current_tab }}{% if search_query %}&q={{ search_query }}{% endif %}">&laquo; Previous</a>
+            </li>
+          {% endif %}
+          <li class="page-item disabled">
+            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+          </li>
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}&tab={{ current_tab }}{% if search_query %}&q={{ search_query }}{% endif %}">Next &raquo;</a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    {% endif %}
+  {% else %}
+    <div id="notificationsEmptyState">
+      {% include 'components/empty_state.html' with empty_title="You're all caught up!" empty_message="There are no notifications matching your current filter." empty_icon="bi-bell-slash" empty_action_url="/inbox/" empty_action_label="Browse Inbox" %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+<div class="email-row {% if not email.is_read %}unread{% endif %}" id="email-row-{{ email.id }}">
+  <div class="email-actions">
+    <!-- Select Checkbox for Bulk Actions -->
+    <input type="checkbox" name="email_ids" class="form-check-input email-select-checkbox" value="{{ email.id }}" aria-label="Select email">
+
+    <!-- Star Toggle Button -->
+    <button
+      type="button"
+      class="email-icon-toggle email-action-toggle"
+      data-email-id="{{ email.id }}"
+      data-action="star"
+      title="{% if email.is_starred %}Unstar{% else %}Star{% endif %}"
+      aria-label="Star email"
+    >
+      <i class="bi {% if email.is_starred %}bi-star-fill text-warning{% else %}bi-star text-muted{% endif %}"></i>
+    </button>
+
+    <!-- Pin Toggle Button -->
+    <button
+      type="button"
+      class="email-icon-toggle email-action-toggle"
+      data-email-id="{{ email.id }}"
+      data-action="pin"
+      title="{% if email.is_pinned %}Unpin{% else %}Pin to top{% endif %}"
+      aria-label="Pin email"
+    >
+      <i class="bi {% if email.is_pinned %}bi-pin-angle-fill text-primary{% else %}bi-pin-angle text-muted{% endif %}"></i>
+    </button>
+  </div>
+
+  <!-- Sender Name & Link (Custom Sender Intelligence applied) -->
+  <a href="{% url 'emails:detail' email.id %}" class="email-sender text-decoration-none text-body {% if not email.is_read %}fw-bold{% else %}fw-normal{% endif %}" title="{{ email.sender_email }}">
+    {{ email.effective_sender_name }}
+  </a>
+
+  <!-- Subject & Snippet Preview -->
+  <a href="{% url 'emails:detail' email.id %}" class="email-content-preview text-decoration-none text-body">
+    {% if email.has_attachments %}
+      <i class="bi bi-paperclip text-secondary me-1" title="Has attachments"></i>
+    {% endif %}
+    <span class="email-subject {% if not email.is_read %}fw-bold{% else %}fw-medium{% endif %}">{{ email.subject }}</span>
+    <span class="email-snippet text-muted">— {{ email.snippet|default:email.body_text|truncatechars:90 }}</span>
+  </a>
+
+  <!-- Category & Priority & Time Meta -->
+  <div class="email-meta d-flex align-items-center gap-1">
+    <!-- Effective Importance Badge -->
+    {% if email.effective_importance %}
+      <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 0.72rem;" title="{{ email.effective_importance_reason }}">
+        <i class="bi bi-star-fill text-warning me-1"></i>⭐ Important
+      </span>
+    {% endif %}
+
+    <!-- Effective Category Badge -->
+    <span class="badge {{ email.effective_category_meta.bg }} {{ email.effective_category_meta.text }} border border-opacity-25" style="font-size: 0.75rem;" title="Category: {{ email.effective_category }}">
+      <i class="bi {{ email.effective_category_meta.icon }} me-1"></i>{{ email.effective_category }}
+    </span>
+
+    <!-- Effective Priority Badge -->
+    {% if email.effective_priority %}
+      <span class="badge {{ email.effective_priority_meta.badge }}" style="font-size: 0.72rem;" title="Priority: {{ email.effective_priority }}">
+        <i class="bi {{ email.effective_priority_meta.icon }} me-1"></i>{{ email.effective_priority }}
+      </span>
+    {% endif %}
+
+    <!-- AI Status Indicator -->
+    {% if email.ai_status == 'FAILED' %}
+      <span class="text-danger small" title="AI Analysis Failed: {{ email.ai_error|default:'Service error' }}">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+      </span>
+    {% elif email.ai_status == 'PROCESSING' %}
+      <span class="spinner-border spinner-border-sm text-primary" role="status" title="AI analyzing..."></span>
+    {% endif %}
+
+    <!-- Date/Time -->
+    <span class="email-date ms-1">{{ email.received_at|date:"M d, g:i A" }}</span>
+  </div>
+</div>

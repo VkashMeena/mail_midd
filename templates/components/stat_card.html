@@ -1,0 +1,16 @@
+<div class="card stat-card h-100">
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <span class="stat-label">{{ label }}</span>
+    <div class="stat-icon-wrapper {{ icon_bg|default:'bg-primary-subtle' }} {{ icon_color|default:'text-primary' }}">
+      <i class="bi {{ icon }}"></i>
+    </div>
+  </div>
+  <div class="stat-value">{{ value }}</div>
+  {% if note %}
+    <div class="mt-2 d-flex align-items-center gap-1">
+      <span class="badge {{ note_badge_class|default:'bg-light text-muted border' }}" style="font-size: 0.72rem;">
+        {{ note }}
+      </span>
+    </div>
+  {% endif %}
+</div>
