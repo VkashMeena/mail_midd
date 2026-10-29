@@ -18,3 +18,4 @@ requests>=2.31.0
 beautifulsoup4>=4.12.0
 pytz>=2024.1
 pywebpush>=1.14.0
+groq>=0.9.0

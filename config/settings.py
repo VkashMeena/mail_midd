@@ -24,6 +24,18 @@ DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 allowed_hosts_str = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost')
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_str.split(',') if host.strip()]
+if '.vercel.app' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.extend(['.vercel.app', '.now.sh'])
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.vercel.app',
+    'https://*.now.sh',
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+]
+csrf_env = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+if csrf_env:
+    CSRF_TRUSTED_ORIGINS.extend([origin.strip() for origin in csrf_env.split(',') if origin.strip()])
 
 # Custom User Model (Email as primary identifier)
 AUTH_USER_MODEL = 'accounts.User'
