@@ -11,6 +11,9 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Detect Vercel Serverless Environment
+IS_VERCEL = 'VERCEL' in os.environ or os.environ.get('VERCEL') == '1'
+
 # Load environment variables
 load_dotenv(BASE_DIR / '.env', override=True)
 
@@ -26,6 +29,9 @@ allowed_hosts_str = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost')
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_str.split(',') if host.strip()]
 if '.vercel.app' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.extend(['.vercel.app', '.now.sh'])
+if IS_VERCEL or DEBUG:
+    if '*' not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append('*')
 
 CSRF_TRUSTED_ORIGINS = [
     'https://*.vercel.app',
@@ -102,7 +108,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
 # Database
-# Supports PostgreSQL in production via DATABASE_URL and SQLite in local development
+# Supports PostgreSQL in production via DATABASE_URL and SQLite in local/serverless development
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
     DATABASES = {
@@ -113,10 +119,11 @@ if DATABASE_URL:
         )
     }
 else:
+    db_path = (Path('/tmp') / 'db.sqlite3') if IS_VERCEL else (BASE_DIR / 'db.sqlite3')
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'NAME': db_path,
         }
     }
 
@@ -173,13 +180,14 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATIC_ROOT = (Path('/tmp') / 'staticfiles') if IS_VERCEL else (BASE_DIR / 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 WHITENOISE_MANIFEST_STRICT = False
+WHITENOISE_USE_FINDERS = True
 
 # Media files (Avatars, Uploads)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = (Path('/tmp') / 'media') if IS_VERCEL else (BASE_DIR / 'media')
 
 # Authentication URLs
 LOGIN_URL = 'accounts:login'
@@ -284,8 +292,36 @@ CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes soft limit
 # ==============================================================================
 # Phase 8: Production Structured Logging & Credential Scrubbing
 # ==============================================================================
-LOGS_DIR = BASE_DIR / 'logs'
-LOGS_DIR.mkdir(parents=True, exist_ok=True)
+if IS_VERCEL:
+    LOGS_DIR = Path('/tmp') / 'logs'
+else:
+    LOGS_DIR = BASE_DIR / 'logs'
+
+try:
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass
+
+logging_handlers = {
+    'console': {
+        'class': 'logging.StreamHandler',
+        'formatter': 'verbose',
+        'filters': ['sensitive_data_filter'],
+    },
+}
+
+if not IS_VERCEL:
+    logging_handlers['file'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'filename': LOGS_DIR / 'smartmail.log',
+        'maxBytes': 10 * 1024 * 1024,  # 10 MB per file
+        'backupCount': 5,
+        'formatter': 'verbose',
+        'filters': ['sensitive_data_filter'],
+        'encoding': 'utf-8',
+    }
+
+active_handlers = ['console'] if IS_VERCEL else ['console', 'file']
 
 LOGGING = {
     'version': 1,
@@ -305,49 +341,34 @@ LOGGING = {
             'style': '{',
         },
     },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-            'filters': ['sensitive_data_filter'],
-        },
-        'file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOGS_DIR / 'smartmail.log',
-            'maxBytes': 10 * 1024 * 1024,  # 10 MB per file
-            'backupCount': 5,
-            'formatter': 'verbose',
-            'filters': ['sensitive_data_filter'],
-            'encoding': 'utf-8',
-        },
-    },
+    'handlers': logging_handlers,
     'root': {
-        'handlers': ['console', 'file'],
+        'handlers': active_handlers,
         'level': os.environ.get('DJANGO_LOG_LEVEL', 'INFO'),
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': active_handlers,
             'level': os.environ.get('DJANGO_LOG_LEVEL', 'INFO'),
             'propagate': False,
         },
         'emails': {
-            'handlers': ['console', 'file'],
+            'handlers': active_handlers,
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
         'ai_engine': {
-            'handlers': ['console', 'file'],
+            'handlers': active_handlers,
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
         'gmail_integration': {
-            'handlers': ['console', 'file'],
+            'handlers': active_handlers,
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
         'notifications': {
-            'handlers': ['console', 'file'],
+            'handlers': active_handlers,
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },

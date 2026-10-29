@@ -50,18 +50,18 @@ def update_env_file(updates: dict) -> bool:
                 new_lines.append('\n')
             new_lines.append(f"{key}={val}\n")
 
-    try:
-        with open(env_path, 'w', encoding='utf-8') as f:
-            f.writelines(new_lines)
-    except Exception as exc:
-        logger.error("Failed to write to .env file: %s", exc)
-        return False
-
     # Update in-memory runtime environment and django settings immediately
     for key, val in updates.items():
         os.environ[key] = str(val)
         if hasattr(settings, key):
             setattr(settings, key, val)
+
+    try:
+        with open(env_path, 'w', encoding='utf-8') as f:
+            f.writelines(new_lines)
+    except Exception as exc:
+        logger.warning("Could not persist to .env file (serverless/read-only environment): %s", exc)
+        return True
 
     logger.info("Successfully updated .env and runtime settings for keys: %s", list(updates.keys()))
     return True
