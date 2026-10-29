@@ -1,19 +1,18 @@
 """
 WSGI config for ai_smart_mail_manager project.
 """
-
 import os
-from django.core.wsgi import get_wsgi_application
+import sys
+from pathlib import Path
+
+# Ensure project root is in sys.path for serverless execution
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
+from django.core.wsgi import get_wsgi_application
+
 application = get_wsgi_application()
 app = application
-
-# Run migrations once per serverless container cold start if running on Vercel without external DB
-if os.environ.get('VERCEL') and not os.environ.get('DATABASE_URL'):
-    try:
-        from django.core.management import call_command
-        call_command('migrate', interactive=False)
-    except Exception as exc:
-        print(f"Vercel auto-migration status: {exc}")
