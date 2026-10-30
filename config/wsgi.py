@@ -4,6 +4,7 @@ WSGI config for ai_smart_mail_manager project.
 import os
 import sys
 import shutil
+import traceback
 from pathlib import Path
 
 # Ensure project root is in sys.path
@@ -24,7 +25,44 @@ if os.environ.get('VERCEL') and not os.environ.get('DATABASE_URL'):
     except Exception as exc:
         print(f"SQLite bootstrap notice: {exc}")
 
-from django.core.wsgi import get_wsgi_application
+_django_app = None
+_init_error = None
 
-application = get_wsgi_application()
-app = application
+try:
+    from django.core.wsgi import get_wsgi_application
+    _django_app = get_wsgi_application()
+except Exception:
+    _init_error = traceback.format_exc()
+    print(f"Django WSGI startup error:\n{_init_error}")
+
+
+def app(environ, start_response):
+    if _init_error is not None:
+        error_page = (
+            f"=== DJANGO STARTUP ERROR ===\n\n"
+            f"{_init_error}\n\n"
+            f"Python Version: {sys.version}\n"
+            f"sys.path: {sys.path}\n"
+        ).encode('utf-8')
+        start_response("200 OK", [
+            ("Content-Type", "text/plain; charset=utf-8"),
+            ("Content-Length", str(len(error_page))),
+        ])
+        return [error_page]
+
+    try:
+        return _django_app(environ, start_response)
+    except Exception:
+        req_error = (
+            f"=== DJANGO RUNTIME REQUEST ERROR ===\n\n"
+            f"{traceback.format_exc()}\n\n"
+            f"PATH_INFO: {environ.get('PATH_INFO')}\n"
+        ).encode('utf-8')
+        start_response("200 OK", [
+            ("Content-Type", "text/plain; charset=utf-8"),
+            ("Content-Length", str(len(req_error))),
+        ])
+        return [req_error]
+
+
+application = app

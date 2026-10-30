@@ -110,7 +110,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
-ASGI_APPLICATION = 'config.asgi.application'
+if not IS_VERCEL:
+    ASGI_APPLICATION = 'config.asgi.application'
 
 # Database
 # Supports PostgreSQL in production via DATABASE_URL and SQLite in local/serverless development
