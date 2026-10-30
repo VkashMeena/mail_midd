@@ -1,5 +1,21 @@
 {
   "version": 2,
+  "functions": {
+    "api/index.py": {
+      "includeFiles": [
+        "templates/**",
+        "static/**",
+        "initial_db.sqlite3",
+        "config/**",
+        "accounts/**",
+        "emails/**",
+        "dashboard/**",
+        "notifications/**",
+        "ai_engine/**",
+        "gmail_integration/**"
+      ]
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",

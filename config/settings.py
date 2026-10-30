@@ -20,8 +20,13 @@ load_dotenv(BASE_DIR / '.env', override=True)
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = os.environ.get(
     'SECRET_KEY',
-    'django-insecure-ai-smart-mail-manager-phase1-dev-key-78x9a2b3c4'
+    os.environ.get(
+        'DJANGO_SECRET_KEY',
+        'django-insecure-ai-smart-mail-manager-phase1-dev-key-78x9a2b3c4'
+    )
 )
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
