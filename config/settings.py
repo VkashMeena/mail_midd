@@ -5,8 +5,6 @@ Phase 2: Authentication + Gmail Integration Foundation.
 
 from pathlib import Path
 import os
-import dj_database_url
-from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -14,8 +12,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Detect Vercel Serverless Environment
 IS_VERCEL = 'VERCEL' in os.environ or os.environ.get('VERCEL') == '1'
 
-# Load environment variables
-load_dotenv(BASE_DIR / '.env', override=True)
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / '.env', override=True)
+except ImportError:
+    pass
 
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = os.environ.get(
@@ -116,7 +122,7 @@ if not IS_VERCEL:
 # Database
 # Supports PostgreSQL in production via DATABASE_URL and SQLite in local/serverless development
 DATABASE_URL = os.environ.get('DATABASE_URL')
-if DATABASE_URL:
+if DATABASE_URL and dj_database_url:
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
