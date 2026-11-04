@@ -9,7 +9,11 @@ from django.db import transaction
 from django.conf import settings
 import re
 import bleach
-from bleach.css_sanitizer import CSSSanitizer, ALLOWED_CSS_PROPERTIES
+try:
+    from bleach.css_sanitizer import CSSSanitizer, ALLOWED_CSS_PROPERTIES
+except ImportError:
+    CSSSanitizer = None
+    ALLOWED_CSS_PROPERTIES = []
 from googleapiclient.errors import HttpError
 
 from emails.models import Email, EmailAttachment, EmailCategory, EmailPriority, EmailImportance
@@ -47,7 +51,10 @@ SAFE_CSS_PROPERTIES = list(ALLOWED_CSS_PROPERTIES) + [
     'text-decoration', 'box-sizing', 'mso-table-lspace', 'mso-table-rspace',
     '-webkit-text-size-adjust', '-ms-text-size-adjust'
 ]
-EMAIL_CSS_SANITIZER = CSSSanitizer(allowed_css_properties=SAFE_CSS_PROPERTIES)
+if CSSSanitizer is not None:
+    EMAIL_CSS_SANITIZER = CSSSanitizer(allowed_css_properties=SAFE_CSS_PROPERTIES)
+else:
+    EMAIL_CSS_SANITIZER = None
 
 
 def decode_base64url(data_str: str) -> str:
@@ -79,13 +86,14 @@ def sanitize_email_html(html_content: str) -> str:
     try:
         # Strip script tags and content completely before bleach
         clean_input = re.sub(r'<script[^>]*>.*?</script>', '', html_content, flags=re.DOTALL | re.IGNORECASE)
-        cleaned = bleach.clean(
-            clean_input,
-            tags=ALLOWED_HTML_TAGS,
-            attributes=ALLOWED_HTML_ATTRIBUTES,
-            css_sanitizer=EMAIL_CSS_SANITIZER,
-            strip=True
-        )
+        bleach_kwargs = {
+            'tags': ALLOWED_HTML_TAGS,
+            'attributes': ALLOWED_HTML_ATTRIBUTES,
+            'strip': True
+        }
+        if EMAIL_CSS_SANITIZER is not None:
+            bleach_kwargs['css_sanitizer'] = EMAIL_CSS_SANITIZER
+        cleaned = bleach.clean(clean_input, **bleach_kwargs)
         from emails.utils import clean_leaked_css_from_html
         return clean_leaked_css_from_html(cleaned)
     except Exception as exc:
