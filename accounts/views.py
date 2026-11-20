@@ -175,6 +175,7 @@ def google_login_view(request):
 
     state = secrets.token_urlsafe(32)
     request.session['google_login_state'] = state
+    request.session['google_login_redirect_uri'] = redirect_uri
 
     auth_params = {
         'client_id': client_id,
@@ -216,7 +217,7 @@ def google_callback_view(request):
 
     client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '') or getattr(settings, 'GOOGLE_OAUTH_CLIENT_ID', '')
     client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', '') or getattr(settings, 'GOOGLE_OAUTH_CLIENT_SECRET', '')
-    redirect_uri = getattr(settings, 'GOOGLE_OAUTH_REDIRECT_URI', '') or request.build_absolute_uri(reverse('accounts:google_callback'))
+    redirect_uri = request.session.pop('google_login_redirect_uri', None) or getattr(settings, 'GOOGLE_OAUTH_REDIRECT_URI', '') or request.build_absolute_uri(reverse('accounts:google_callback'))
 
     if not client_id or not client_secret:
         messages.error(request, "Google OAuth credentials not configured in settings.")
