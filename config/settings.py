@@ -131,7 +131,18 @@ if DATABASE_URL and dj_database_url:
         )
     }
 else:
-    db_path = (Path('/tmp') / 'db.sqlite3') if IS_VERCEL else (BASE_DIR / 'db.sqlite3')
+    if IS_VERCEL and not os.environ.get('DATABASE_URL'):
+        db_path = Path('/tmp') / 'db.sqlite3'
+        template_db = BASE_DIR / 'initial_db.sqlite3'
+        if template_db.exists() and (not db_path.exists() or db_path.stat().st_size == 0):
+            try:
+                import shutil
+                shutil.copyfile(template_db, db_path)
+            except Exception:
+                pass
+    else:
+        db_path = BASE_DIR / 'db.sqlite3'
+
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -158,7 +169,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Security & Session Configuration
+# Security & Session Configuration (Serverless signed-cookie sessions persist across stateless instances)
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = True
@@ -169,8 +181,8 @@ SESSION_COOKIE_AGE = 1209600  # 2 weeks default
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = 'same-origin'
 
-if not DEBUG:
-    X_FRAME_OPTIONS = 'DENY'
+if IS_VERCEL or not DEBUG:
+    X_FRAME_OPTIONS = 'SAMEORIGIN' if IS_VERCEL else 'DENY'
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', 31536000))

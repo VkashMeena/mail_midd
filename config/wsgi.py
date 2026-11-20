@@ -50,6 +50,17 @@ def app(environ, start_response):
         ])
         return [error_page]
 
+    # Ensure /tmp/db.sqlite3 exists on every invocation
+    if os.environ.get('VERCEL') and not os.environ.get('DATABASE_URL'):
+        try:
+            db_dest = Path('/tmp') / 'db.sqlite3'
+            if not db_dest.exists() or db_dest.stat().st_size == 0:
+                template_db = PROJECT_ROOT / 'initial_db.sqlite3'
+                if template_db.exists():
+                    shutil.copyfile(template_db, db_dest)
+        except Exception:
+            pass
+
     try:
         return _django_app(environ, start_response)
     except Exception:
