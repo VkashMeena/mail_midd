@@ -168,18 +168,81 @@
     }[tag] || tag));
   }
 
+  // Prepend live notification item into Topbar Notification Dropdown
+  function prependNotificationToDropdown(data) {
+    const list = document.getElementById('notifDropdownList');
+    if (!list) return;
+
+    const emptyState = document.getElementById('notifDropdownEmptyState');
+    if (emptyState) emptyState.remove();
+
+    const notifId = data.notification_id;
+    if (document.getElementById(`notif-drop-item-${notifId}`)) return;
+
+    const isPriority = (data.importance_source === 'important_sender' || data.is_priority_sender);
+    const card = document.createElement('div');
+    card.className = `notif-dropdown-card unread ${isPriority ? 'priority-sender-card' : ''}`;
+    card.id = `notif-drop-item-${notifId}`;
+    card.setAttribute('data-notif-id', notifId);
+
+    const iconHtml = isPriority
+      ? `<div class="notif-icon-circle priority-star-circle" title="Priority Sender"><i class="bi bi-star-fill text-warning"></i></div>`
+      : (data.importance_source === 'ai'
+        ? `<div class="notif-icon-circle ai-bot-circle" title="AI Important"><i class="bi bi-robot text-primary"></i></div>`
+        : `<div class="notif-icon-circle standard-circle"><i class="bi ${data.icon_class || 'bi-bell-fill'}"></i></div>`);
+
+    const priorityBadge = isPriority
+      ? `<span class="badge-priority-tag"><i class="bi bi-star-fill text-warning me-0.5"></i>Priority</span>`
+      : '';
+
+    card.innerHTML = `
+      <div class="d-flex align-items-start gap-2.5 w-100">
+        <div class="notif-avatar-wrapper flex-shrink-0 mt-1">
+          ${iconHtml}
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
+            <div class="notif-card-title text-truncate fw-semibold">
+              ${priorityBadge}
+              <a href="${data.url || '/inbox/'}" class="text-body text-decoration-none">
+                ${escapeHtml(data.title)}
+              </a>
+            </div>
+            <span class="notif-time-badge text-nowrap">Just now</span>
+          </div>
+          <p class="notif-card-message text-truncate small text-muted mb-1">
+            ${escapeHtml(data.message)}
+          </p>
+          <div class="d-flex align-items-center gap-2">
+            <a href="${data.url || '/inbox/'}" class="notif-link-btn small text-decoration-none">
+              View email <i class="bi bi-arrow-right"></i>
+            </a>
+          </div>
+        </div>
+        <span class="notif-unread-dot" title="Unread"></span>
+      </div>
+    `;
+
+    list.insertBefore(card, list.firstChild);
+  }
+
   // Trigger HTML5 Desktop Notification
   function showDesktopNotification(data) {
     if (!browserEnabled) return;
     if (!('Notification' in window)) return;
 
+    const notifTitle = data.title || 'SmartMail Alert';
+    const notifBody = data.message || 'Important email received.';
+
     function triggerNativeNotification() {
       // 1. Try ServiceWorker registration.showNotification first if active
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         navigator.serviceWorker.ready.then((reg) => {
-          reg.showNotification(data.title || 'SmartMail Alert', {
-            body: data.message || 'Important email received.',
+          reg.showNotification(notifTitle, {
+            body: notifBody,
             icon: '/static/images/logo-192.png',
+            badge: '/static/images/badge-72.png',
+            vibrate: [200, 100, 200],
             tag: `smartmail-notif-${data.notification_id}`,
             renotify: true,
             data: { url: data.url || '/inbox/' },
@@ -194,10 +257,38 @@
 
     function fallbackWindowNotification() {
       try {
-        const notif = new Notification(data.title || 'SmartMail Alert', {
-          body: data.message || 'Important email received.',
+        const notif = new Notification(notifTitle, {
+          body: notifBody,
           icon: '/static/images/logo-192.png',
           tag: `smartmail-notif-${data.notification_id}`,
+          renotify: true,
+        });
+
+        notif.onclick = function (e) {
+          e.preventDefault();
+          window.focus();
+          if (data.url) {
+            window.location.href = data.url;
+          }
+          notif.close();
+        };
+      } catch (e) {
+        console.debug('HTML5 desktop notification execution failed:', e);
+      }
+    }
+
+    if (Notification.permission === 'granted') {
+      triggerNativeNotification();
+    } else if (Notification.permission === 'default') {
+      // If permission has not been requested, prompt user
+      Notification.requestPermission().then((perm) => {
+        updatePermissionUIState(perm);
+        if (perm === 'granted') {
+          triggerNativeNotification();
+        }
+      });
+    }
+  }
           renotify: true,
         });
 
@@ -243,6 +334,7 @@
       }
 
       prependNotificationToUI(data);
+      prependNotificationToDropdown(data);
     } else if (data.type === 'connection_established' && data.unread_count !== undefined) {
       updateNotificationBadges(data.unread_count);
     }

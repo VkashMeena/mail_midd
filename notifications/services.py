@@ -116,21 +116,30 @@ def create_important_notification(email: Email, force_source: str = None) -> Not
         logger.debug("Notification for email id=%s already exists (dedup_key=%s). Skipping duplicate.", email.id, dedup_key)
         return existing
 
-    # Format Title <= 100 characters using effective sender name
-    title = sanitize_text(sender_display, 100) or 'Important Email'
-
-    # Format Message <= 250 characters with subject snippet
-    subject_clean = sanitize_text(email.subject or '(No Subject)', 180)
-    if importance_source == Notification.SOURCE_IMPORTANT_SENDER:
-        message = f"Important email received: {subject_clean}"
+    # Format Title <= 100 characters using effective sender name (set name for Priority Senders)
+    if importance_source == Notification.SOURCE_IMPORTANT_SENDER or notif_type == Notification.TYPE_IMPORTANT_SENDER:
+        title = f"⭐ Priority Mail: {sender_display}"
     elif importance_source == Notification.SOURCE_AI:
-        message = f"AI detected an important email: {subject_clean}"
+        title = f"🤖 AI Alert: {sender_display}"
+    elif importance_source == Notification.SOURCE_PINNED:
+        title = f"📌 Pinned: {sender_display}"
+    else:
+        title = sanitize_text(sender_display, 100) or 'Important Email'
+
+    title = sanitize_text(title, 100)
+
+    # Format Message <= 250 characters with subject snippet and clear sender reference
+    subject_clean = sanitize_text(email.subject or '(No Subject)', 180)
+    if importance_source == Notification.SOURCE_IMPORTANT_SENDER or notif_type == Notification.TYPE_IMPORTANT_SENDER:
+        message = f"From {sender_display}: {subject_clean}"
+    elif importance_source == Notification.SOURCE_AI:
+        message = f"AI classified as important ({sender_display}): {subject_clean}"
     elif importance_source == Notification.SOURCE_USER_OVERRIDE:
         message = f"Important email flagged by you: {subject_clean}"
     elif importance_source == Notification.SOURCE_PINNED:
-        message = f"Pinned email alert: {subject_clean}"
+        message = f"Pinned sender alert ({sender_display}): {subject_clean}"
     else:
-        message = f"Important email received: {subject_clean}"
+        message = f"Important email received from {sender_display}: {subject_clean}"
 
     message = sanitize_text(message, 250)
     action_url = f"/inbox/{email.id}/"

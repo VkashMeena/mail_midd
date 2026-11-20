@@ -41,42 +41,113 @@
     </button>
 
     <!-- Notifications Dropdown -->
-    <div class="dropdown">
-      <button class="topbar-icon-btn" type="button" id="notifDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications">
-        <i class="bi bi-bell"></i>
+    <div class="dropdown notif-dropdown-wrapper">
+      <button class="topbar-icon-btn notif-bell-btn position-relative" type="button" id="notifDropdownBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Notifications">
+        <i class="bi bi-bell-fill"></i>
         {% if global_unread_notifications > 0 %}
-          <span class="topbar-icon-badge"></span>
+          <span class="topbar-icon-badge pulse-dot"></span>
         {% endif %}
       </button>
-      <ul class="dropdown-menu dropdown-menu-end shadow-lg py-2" aria-labelledby="notifDropdownBtn" style="width: 320px; max-height: 420px; overflow-y: auto;">
-        <li class="dropdown-header d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
-          <span class="fw-bold">Notifications</span>
-          {% if global_unread_notifications > 0 %}
-            <span class="badge bg-primary-subtle text-primary">{{ global_unread_notifications }} new</span>
-          {% endif %}
-        </li>
-        {% if recent_notifications %}
-          {% for notif in recent_notifications %}
-            <li>
-              <a class="dropdown-item px-3 py-2 border-bottom d-flex align-items-start gap-2 {% if not notif.is_read %}bg-body-tertiary{% endif %}" href="{% if notif.action_url %}{{ notif.action_url }}{% else %}{% url 'notifications' %}{% endif %}">
-                <i class="bi {{ notif.icon_class }} fs-6 mt-1"></i>
-                <div class="text-truncate">
-                  <div class="fw-semibold text-truncate" style="font-size: 0.85rem;">{{ notif.title }}</div>
-                  <small class="text-muted d-block text-truncate" style="font-size: 0.78rem;">{{ notif.message }}</small>
+      <div class="dropdown-menu dropdown-menu-end notif-dropdown-menu shadow-2xl p-0" aria-labelledby="notifDropdownBtn">
+        <!-- Header -->
+        <div class="notif-dropdown-header d-flex justify-content-between align-items-center px-3 py-3 border-bottom">
+          <div class="d-flex align-items-center gap-2">
+            <div class="notif-header-icon-box">
+              <i class="bi bi-bell-fill text-primary"></i>
+            </div>
+            <div>
+              <h6 class="mb-0 fw-bold fs-6">Alerts & Notifications</h6>
+              <small class="text-muted" style="font-size: 0.73rem;">Real-time priority intelligence</small>
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            {% if global_unread_notifications > 0 %}
+              <span class="badge notif-count-pill" id="topbarUnreadPill">{{ global_unread_notifications }} new</span>
+              <form method="POST" action="{% url 'notifications:mark_all_read' %}" class="d-inline m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-link p-0 text-decoration-none fw-semibold small text-primary" title="Mark all as read">
+                  <i class="bi bi-check2-all me-0.5"></i> Read all
+                </button>
+              </form>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.7rem;">All read</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Notification Items List -->
+        <div class="notif-dropdown-scrollable" id="notifDropdownList">
+          {% if recent_notifications %}
+            {% for notif in recent_notifications %}
+              <div class="notif-dropdown-card {% if not notif.is_read %}unread{% endif %} {% if notif.importance_source == 'important_sender' %}priority-sender-card{% endif %}" id="notif-drop-item-{{ notif.id }}">
+                <div class="d-flex align-items-start gap-2.5 w-100">
+                  <div class="notif-avatar-wrapper flex-shrink-0 mt-1">
+                    {% if notif.importance_source == 'important_sender' %}
+                      <div class="notif-icon-circle priority-star-circle" title="Priority Sender">
+                        <i class="bi bi-star-fill text-warning"></i>
+                      </div>
+                    {% elif notif.importance_source == 'ai' %}
+                      <div class="notif-icon-circle ai-bot-circle" title="AI Important">
+                        <i class="bi bi-robot text-primary"></i>
+                      </div>
+                    {% elif notif.importance_source == 'pinned' %}
+                      <div class="notif-icon-circle pinned-circle" title="Pinned">
+                        <i class="bi bi-pin-angle-fill text-info"></i>
+                      </div>
+                    {% else %}
+                      <div class="notif-icon-circle standard-circle">
+                        <i class="bi {{ notif.icon_class }}"></i>
+                      </div>
+                    {% endif %}
+                  </div>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
+                      <div class="notif-card-title text-truncate fw-semibold">
+                        {% if notif.importance_source == 'important_sender' %}
+                          <span class="badge-priority-tag"><i class="bi bi-star-fill text-warning me-0.5"></i>Priority</span>
+                        {% endif %}
+                        <a href="{% if notif.action_url %}{{ notif.action_url }}{% else %}{% url 'notifications' %}{% endif %}" class="text-body text-decoration-none">
+                          {{ notif.title }}
+                        </a>
+                      </div>
+                      <span class="notif-time-badge text-nowrap">{{ notif.created_at|timesince }} ago</span>
+                    </div>
+                    <p class="notif-card-message text-truncate small text-muted mb-1">
+                      {{ notif.message }}
+                    </p>
+                    <div class="d-flex align-items-center gap-2">
+                      {% if notif.action_url %}
+                        <a href="{{ notif.action_url }}" class="notif-link-btn small text-decoration-none">
+                          View email <i class="bi bi-arrow-right"></i>
+                        </a>
+                      {% endif %}
+                    </div>
+                  </div>
+                  {% if not notif.is_read %}
+                    <span class="notif-unread-dot" title="Unread"></span>
+                  {% endif %}
                 </div>
-              </a>
-            </li>
-          {% endfor %}
-        {% else %}
-          <li class="px-3 py-4 text-center text-muted">
-            <i class="bi bi-check2-circle fs-3 text-secondary d-block mb-1"></i>
-            <small>No recent notifications</small>
-          </li>
-        {% endif %}
-        <li class="p-2 text-center">
-          <a href="{% url 'notifications' %}" class="btn btn-sm btn-link text-decoration-none">View All Notifications</a>
-        </li>
-      </ul>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="px-4 py-5 text-center notif-empty-state" id="notifDropdownEmptyState">
+              <div class="notif-empty-icon mb-2">
+                <i class="bi bi-bell-slash text-muted fs-2"></i>
+              </div>
+              <h6 class="fw-semibold mb-1" style="font-size: 0.9rem;">All caught up!</h6>
+              <p class="text-muted small mb-0">No new priority or important alerts right now.</p>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Footer -->
+        <div class="notif-dropdown-footer p-2 text-center border-top">
+          <a href="{% url 'notifications' %}" class="btn btn-sm btn-link text-decoration-none fw-semibold w-100 d-flex align-items-center justify-content-center gap-1.5 py-1.5">
+            <span>Open Notification Center</span>
+            <i class="bi bi-arrow-right"></i>
+          </a>
+        </div>
+      </div>
     </div>
 
     <!-- User Profile Dropdown -->

@@ -1,47 +1,69 @@
-<div class="card mb-3 p-3 {% if not notif.is_read %}border-primary border-start border-3 bg-body-tertiary{% endif %}" id="notification-item-{{ notif.id }}">
-  <div class="d-flex align-items-start justify-content-between gap-3">
+<div class="card mb-3 p-3.5 notif-center-card {% if not notif.is_read %}unread-notif-card{% endif %} {% if notif.importance_source == 'important_sender' %}priority-sender-card{% endif %}" id="notification-item-{{ notif.id }}">
+  <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap flex-sm-nowrap">
     <div class="d-flex align-items-start gap-3">
-      <div class="stat-icon-wrapper bg-primary-subtle text-primary mt-1" style="width: 40px; height: 40px; font-size: 1.2rem;">
-        <i class="bi {{ notif.icon_class }}"></i>
+      <div class="notif-avatar-box flex-shrink-0 mt-1">
+        {% if notif.importance_source == 'important_sender' %}
+          <div class="notif-icon-circle priority-star-circle" style="width: 42px; height: 42px; font-size: 1.15rem;">
+            <i class="bi bi-star-fill text-warning"></i>
+          </div>
+        {% elif notif.importance_source == 'ai' %}
+          <div class="notif-icon-circle ai-bot-circle" style="width: 42px; height: 42px; font-size: 1.15rem;">
+            <i class="bi bi-robot text-primary"></i>
+          </div>
+        {% elif notif.importance_source == 'pinned' %}
+          <div class="notif-icon-circle pinned-circle" style="width: 42px; height: 42px; font-size: 1.15rem;">
+            <i class="bi bi-pin-angle-fill text-info"></i>
+          </div>
+        {% else %}
+          <div class="notif-icon-circle standard-circle" style="width: 42px; height: 42px; font-size: 1.15rem;">
+            <i class="bi {{ notif.icon_class|default:'bi-bell-fill' }}"></i>
+          </div>
+        {% endif %}
       </div>
       <div>
-        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
-          <h6 class="mb-0 fw-semibold">{{ notif.title }}</h6>
+        <div class="d-flex align-items-center gap-2 mb-1.5 flex-wrap">
+          <h6 class="mb-0 fw-bold fs-6">
+            {% if notif.importance_source == 'important_sender' %}
+              <span class="badge-priority-tag"><i class="bi bi-star-fill text-warning me-1"></i>Priority Sender</span>
+            {% endif %}
+            {{ notif.title }}
+          </h6>
           {% if not notif.is_read %}
-            <span class="badge bg-primary text-white" style="font-size: 0.65rem;">NEW</span>
+            <span class="badge bg-primary text-white" style="font-size: 0.65rem; letter-spacing: 0.05em;">NEW</span>
           {% endif %}
           <span class="badge {{ notif.badge_class }}" style="font-size: 0.65rem;">{{ notif.priority }}</span>
-          <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.7rem;">{{ notif.get_importance_source_display }}</span>
-          <span class="badge bg-light text-dark border" style="font-size: 0.7rem;">{{ notif.get_notification_type_display }}</span>
+          <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.68rem;">{{ notif.get_importance_source_display }}</span>
         </div>
-        <p class="mb-2 text-muted" style="font-size: 0.9rem;">{{ notif.message }}</p>
+        <p class="mb-2 text-muted" style="font-size: 0.92rem; line-height: 1.45;">{{ notif.message }}</p>
         <div class="d-flex align-items-center gap-3">
           <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ notif.created_at|timesince }} ago</small>
           {% if notif.action_url %}
-            <a href="{{ notif.action_url }}" class="btn btn-sm btn-link p-0 text-decoration-none">
-              View Email <i class="bi bi-arrow-right"></i>
+            <a href="{{ notif.action_url }}" class="notif-link-btn small text-decoration-none d-inline-flex align-items-center gap-1">
+              <span>Open email</span>
+              <i class="bi bi-arrow-right"></i>
             </a>
           {% endif %}
         </div>
       </div>
     </div>
 
-    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+    <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto ms-sm-0">
       {% if not notif.is_read %}
         <button
           type="button"
-          class="btn btn-sm btn-outline-secondary mark-notification-btn"
+          class="btn btn-sm btn-outline-secondary mark-notification-btn rounded-pill px-3"
           data-notif-id="{{ notif.id }}"
           title="Mark as read"
         >
-          <i class="bi bi-check2"></i> <span class="d-none d-sm-inline">Mark Read</span>
+          <i class="bi bi-check2"></i> <span class="d-none d-md-inline">Mark Read</span>
         </button>
       {% endif %}
       <button
         type="button"
-        class="btn btn-sm btn-outline-danger delete-notification-btn"
+        class="btn btn-sm btn-outline-danger delete-notification-btn rounded-circle p-2 d-flex align-items-center justify-content-center"
         data-notif-id="{{ notif.id }}"
         title="Delete notification"
+        style="width: 32px; height: 32px;"
       >
         <i class="bi bi-trash3"></i>
       </button>

@@ -44,10 +44,14 @@
 
   <!-- Category & Priority & Time Meta -->
   <div class="email-meta d-flex align-items-center gap-1">
-    <!-- Effective Importance Badge -->
-    {% if email.effective_importance %}
+    <!-- Effective Importance / Priority Sender Badge -->
+    {% if email.matched_priority_sender %}
+      <span class="badge bg-warning-subtle text-warning border border-warning-subtle" style="font-size: 0.72rem;" title="Priority Sender: {{ email.matched_priority_sender.display_name }}">
+        <i class="bi bi-star-fill text-warning me-0.5"></i>⭐ {{ email.matched_priority_sender.display_name }}
+      </span>
+    {% elif email.effective_importance %}
       <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 0.72rem;" title="{{ email.effective_importance_reason }}">
-        <i class="bi bi-star-fill text-warning me-1"></i>⭐ Important
+        <i class="bi bi-star-fill text-warning me-0.5"></i>Important
       </span>
     {% endif %}
 

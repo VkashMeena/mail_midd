@@ -41,7 +41,7 @@ def global_ui_context(request):
     ).count()
 
     unread_notifs = Notification.objects.filter(user=request.user, is_read=False).count()
-    recent_notifs = Notification.objects.filter(user=request.user).order_by('-created_at')[:5]
+    recent_notifs = Notification.objects.filter(user=request.user).order_by('-created_at')[:8]
 
     from django.conf import settings
     from notifications.models import NotificationPreference

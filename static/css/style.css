@@ -3,21 +3,24 @@
    ========================================================================== */
 
 :root {
-  /* Color Palette */
+  /* Color Palette — Indigo & Electric Violet Signature */
   --primary: #0F172A;
-  --secondary: #2563EB;
-  --secondary-hover: #1D4ED8;
+  --primary-gradient: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+  --secondary: #4F46E5;
+  --secondary-hover: #4338CA;
   --accent: #F59E0B;
   --accent-hover: #D97706;
 
-  /* Neutrals & Surfaces - Light Mode Default */
+  /* Neutrals & Surfaces - Light Mode */
   --background: #F8FAFC;
   --surface: #FFFFFF;
   --surface-raised: #FFFFFF;
   --surface-hover: #F1F5F9;
+  --surface-glass: rgba(255, 255, 255, 0.82);
   --text: #0F172A;
   --text-muted: #64748B;
   --border: #E2E8F0;
+  --border-subtle: rgba(15, 23, 42, 0.06);
   --border-light: #F1F5F9;
 
   /* Status Colors */
@@ -25,37 +28,62 @@
   --warning: #F59E0B;
   --danger: #EF4444;
   --info: #0EA5E9;
+  --priority-gold: #F59E0B;
+  --priority-glow: rgba(245, 158, 11, 0.25);
 
   /* Layout dimensions */
   --sidebar-width: 260px;
   --sidebar-collapsed-width: 72px;
   --topbar-height: 64px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.03);
+  /* Premium Layered Shadows */
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 28px -6px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+  --shadow-2xl: 0 24px 50px -12px rgba(15, 23, 42, 0.22);
+  --shadow-neon: 0 0 20px rgba(99, 102, 241, 0.35);
 
   /* Transitions */
-  --transition-fast: 0.15s ease-in-out;
-  --transition-base: 0.25s ease-in-out;
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Dark Mode Palette */
+/* Dark Mode Palette — Midnight Obsidian Cockpit */
 [data-bs-theme="dark"] {
-  --primary: #0F172A;
-  --background: #0B1120;
-  --surface: #1E293B;
-  --surface-raised: #283548;
-  --surface-hover: #334155;
+  --primary: #080C14;
+  --background: #080C15;
+  --surface: #0F172A;
+  --surface-raised: #152036;
+  --surface-hover: #1E293B;
+  --surface-glass: rgba(15, 23, 42, 0.85);
   --text: #F8FAFC;
   --text-muted: #94A3B8;
-  --border: #334155;
-  --border-light: #1E293B;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-light: rgba(255, 255, 255, 0.05);
 
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 16px -2px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 36px -6px rgba(0, 0, 0, 0.65);
+  --shadow-2xl: 0 28px 60px -12px rgba(0, 0, 0, 0.85);
+  --shadow-neon: 0 0 25px rgba(99, 102, 241, 0.45);
+}
+
+/* Custom Smooth Modern Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
 }
 
 /* ==========================================================================
@@ -67,7 +95,10 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background-color: var(--background);
   color: var(--text);
   min-height: 100vh;
