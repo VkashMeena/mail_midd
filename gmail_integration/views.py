@@ -1,5 +1,7 @@
+import os
 import logging
 from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
@@ -35,8 +37,16 @@ def connect_view(request):
 
     state = oauth_handler.generate_state()
     request.session['gmail_oauth_state'] = state
+    
+    # Priority: explicit env var -> dynamic request URI -> oauth_handler fallback
+    dynamic_uri = request.build_absolute_uri(reverse('gmail:callback'))
+    if (request.is_secure() or request.headers.get('x-forwarded-proto') == 'https') and dynamic_uri.startswith('http://'):
+        dynamic_uri = 'https://' + dynamic_uri[7:]
+    redirect_uri = os.environ.get('GOOGLE_REDIRECT_URI') or dynamic_uri or oauth_handler.redirect_uri
+    request.session['gmail_oauth_redirect_uri'] = redirect_uri
+
     try:
-        auth_url = oauth_handler.get_authorization_url(state)
+        auth_url = oauth_handler.get_authorization_url(state, redirect_uri=redirect_uri)
         return redirect(auth_url)
     except GmailConfigurationError as exc:
         messages.error(request, exc.message)
@@ -61,8 +71,15 @@ def authorize_send_view(request):
     from .scopes import get_send_scopes_list
     state = oauth_handler.generate_state()
     request.session['gmail_oauth_state'] = state
+    
+    dynamic_uri = request.build_absolute_uri(reverse('gmail:callback'))
+    if (request.is_secure() or request.headers.get('x-forwarded-proto') == 'https') and dynamic_uri.startswith('http://'):
+        dynamic_uri = 'https://' + dynamic_uri[7:]
+    redirect_uri = os.environ.get('GOOGLE_REDIRECT_URI') or dynamic_uri or oauth_handler.redirect_uri
+    request.session['gmail_oauth_redirect_uri'] = redirect_uri
+
     try:
-        auth_url = oauth_handler.get_authorization_url(state, scopes=get_send_scopes_list())
+        auth_url = oauth_handler.get_authorization_url(state, scopes=get_send_scopes_list(), redirect_uri=redirect_uri)
         return redirect(auth_url)
     except Exception as exc:
         logger.error("Failed to generate send authorization URL: %s", exc)
@@ -90,17 +107,25 @@ def callback_view(request):
     incoming_code = request.GET.get('code')
     incoming_state = request.GET.get('state')
     session_state = request.session.pop('gmail_oauth_state', None)
+    session_redirect = request.session.pop('gmail_oauth_redirect_uri', None)
 
     if not incoming_code or not incoming_state or not session_state:
         messages.error(request, "Unable to complete Gmail authorization.")
         return redirect(REDIRECT_TARGET)
+
+    oauth_handler = gmail_service.oauth_handler
+    dynamic_uri = request.build_absolute_uri(reverse('gmail:callback'))
+    if (request.is_secure() or request.headers.get('x-forwarded-proto') == 'https') and dynamic_uri.startswith('http://'):
+        dynamic_uri = 'https://' + dynamic_uri[7:]
+    redirect_uri = session_redirect or os.environ.get('GOOGLE_REDIRECT_URI') or dynamic_uri or oauth_handler.redirect_uri
 
     try:
         account = gmail_service.connect_gmail_account(
             user=request.user,
             auth_code=incoming_code,
             incoming_state=incoming_state,
-            session_state=session_state
+            session_state=session_state,
+            redirect_uri=redirect_uri
         )
         try:
             stats = sync_service.sync_gmail_account(account)

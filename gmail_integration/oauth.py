@@ -49,10 +49,10 @@ class GmailOAuthHandler:
         """Generates a cryptographically secure random token for state CSRF protection."""
         return secrets.token_urlsafe(32)
 
-    def get_authorization_url(self, state: str, scopes=None) -> str:
+    def get_authorization_url(self, state: str, scopes=None, redirect_uri=None) -> str:
         """
         Builds Google OAuth 2.0 authorization URL with CSRF state protection.
-        Does not accept client_id, redirect_uri, or scopes from frontend parameters.
+        Does not accept client_id or scopes from frontend parameters.
         Optional scopes parameter allows requesting extended permissions (e.g. Gmail send).
         """
         if not self.is_configured():
@@ -64,7 +64,7 @@ class GmailOAuthHandler:
 
         params = {
             'client_id': self.client_id,
-            'redirect_uri': self.redirect_uri,
+            'redirect_uri': redirect_uri or self.redirect_uri,
             'response_type': 'code',
             'scope': scope_str,
             'access_type': 'offline',
@@ -83,7 +83,7 @@ class GmailOAuthHandler:
             return False
         return secrets.compare_digest(str(incoming_state), str(session_state))
 
-    def exchange_code_for_tokens(self, auth_code: str) -> dict:
+    def exchange_code_for_tokens(self, auth_code: str, redirect_uri: str = None) -> dict:
         """
         Exchanges authorization code for Google OAuth tokens.
         Never logs authorization codes, access tokens, or refresh tokens.
@@ -98,7 +98,7 @@ class GmailOAuthHandler:
             'code': auth_code,
             'client_id': self.client_id,
             'client_secret': self.client_secret,
-            'redirect_uri': self.redirect_uri,
+            'redirect_uri': redirect_uri or self.redirect_uri,
             'grant_type': 'authorization_code',
         }
 

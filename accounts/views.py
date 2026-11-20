@@ -163,7 +163,16 @@ def google_login_view(request):
     Initiates Google OAuth 2.0 flow for authentication.
     """
     client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '') or getattr(settings, 'GOOGLE_OAUTH_CLIENT_ID', '')
-    redirect_uri = getattr(settings, 'GOOGLE_OAUTH_REDIRECT_URI', '') or request.build_absolute_uri(reverse('accounts:google_callback'))
+    
+    # Priority: explicit env var -> dynamically resolved request URI -> settings fallback
+    env_redirect = os.environ.get('GOOGLE_OAUTH_REDIRECT_URI')
+    if env_redirect:
+        redirect_uri = env_redirect
+    else:
+        dynamic_uri = request.build_absolute_uri(reverse('accounts:google_callback'))
+        if (request.is_secure() or request.headers.get('x-forwarded-proto') == 'https') and dynamic_uri.startswith('http://'):
+            dynamic_uri = 'https://' + dynamic_uri[7:]
+        redirect_uri = dynamic_uri or getattr(settings, 'GOOGLE_OAUTH_REDIRECT_URI', '')
 
     if not client_id:
         messages.warning(
@@ -217,7 +226,12 @@ def google_callback_view(request):
 
     client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '') or getattr(settings, 'GOOGLE_OAUTH_CLIENT_ID', '')
     client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', '') or getattr(settings, 'GOOGLE_OAUTH_CLIENT_SECRET', '')
-    redirect_uri = request.session.pop('google_login_redirect_uri', None) or getattr(settings, 'GOOGLE_OAUTH_REDIRECT_URI', '') or request.build_absolute_uri(reverse('accounts:google_callback'))
+    session_redirect = request.session.pop('google_login_redirect_uri', None)
+    env_redirect = os.environ.get('GOOGLE_OAUTH_REDIRECT_URI')
+    dynamic_uri = request.build_absolute_uri(reverse('accounts:google_callback'))
+    if (request.is_secure() or request.headers.get('x-forwarded-proto') == 'https') and dynamic_uri.startswith('http://'):
+        dynamic_uri = 'https://' + dynamic_uri[7:]
+    redirect_uri = session_redirect or env_redirect or dynamic_uri or getattr(settings, 'GOOGLE_OAUTH_REDIRECT_URI', '')
 
     if not client_id or not client_secret:
         messages.error(request, "Google OAuth credentials not configured in settings.")

@@ -128,7 +128,7 @@ class GmailService:
             'can_send': account.has_send_permission,
         }
 
-    def connect_gmail_account(self, user, auth_code: str, incoming_state: str, session_state: str) -> GmailAccount:
+    def connect_gmail_account(self, user, auth_code: str, incoming_state: str, session_state: str, redirect_uri: str = None) -> GmailAccount:
         """
         Completes the OAuth flow:
         1. Validates CSRF state against session
@@ -143,7 +143,7 @@ class GmailService:
             raise GmailOAuthError("Invalid authorization request.")
 
         # Exchange code for tokens
-        token_data = self.oauth_handler.exchange_code_for_tokens(auth_code)
+        token_data = self.oauth_handler.exchange_code_for_tokens(auth_code, redirect_uri=redirect_uri)
         access_token = token_data.get('access_token')
         new_refresh_token = token_data.get('refresh_token')
         expires_in = token_data.get('expires_in', 3600)

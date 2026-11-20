@@ -212,7 +212,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Google OAuth Configuration
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID') or os.environ.get('GOOGLE_OAUTH_CLIENT_ID') or ''
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET') or os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET') or ''
-default_oauth_base = 'https://mail-midd.vercel.app' if IS_VERCEL else 'http://127.0.0.1:8000'
+vercel_domain = os.environ.get('VERCEL_PROJECT_PRODUCTION_URL') or os.environ.get('VERCEL_URL')
+if vercel_domain:
+    default_oauth_base = f"https://{vercel_domain.rstrip('/')}" if not vercel_domain.startswith('http') else vercel_domain.rstrip('/')
+elif IS_VERCEL:
+    default_oauth_base = 'https://mail-midd-4fep.vercel.app'
+else:
+    default_oauth_base = 'http://127.0.0.1:8000'
 GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', f'{default_oauth_base}/gmail/oauth/callback/')
 GOOGLE_OAUTH_REDIRECT_URI = os.environ.get('GOOGLE_OAUTH_REDIRECT_URI', f'{default_oauth_base}/accounts/google/callback/')
 GMAIL_SCOPES = os.environ.get(
