@@ -264,9 +264,10 @@ AI_TIMEOUT = int(os.environ.get('AI_TIMEOUT', '30'))
 AI_BASE_URL = os.environ.get('AI_BASE_URL', '')
 
 # Groq API Configuration (Fast LPU Inference)
-GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
-GROQ_MODEL = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY') or os.environ.get('AI_API_KEY') or ''
+GROQ_MODEL = os.environ.get('GROQ_MODEL', 'llama-3.3-70b-versatile')
 GROQ_BASE_URL = os.environ.get('GROQ_BASE_URL', 'https://api.groq.com/openai/v1')
+ALLOW_AI_FALLBACK = os.environ.get('ALLOW_AI_FALLBACK', 'True').lower() in ('true', '1')
 
 # Phase 7 & Upgrade: AI Reply Assistant Configuration
 AI_REPLY_ENABLED = os.environ.get('AI_REPLY_ENABLED', 'True').lower() in ('true', '1')

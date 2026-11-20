@@ -77,7 +77,7 @@ class GroqProvider(BaseAIProvider):
     def api_key(self) -> str:
         if self._api_key is not None:
             return str(self._api_key).strip()
-        key = getattr(settings, 'GROQ_API_KEY', '')
+        key = getattr(settings, 'GROQ_API_KEY', '') or getattr(settings, 'AI_API_KEY', '') or os.environ.get('GROQ_API_KEY', '') or os.environ.get('AI_API_KEY', '')
         return str(key).strip()
 
 

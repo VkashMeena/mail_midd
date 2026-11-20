@@ -212,10 +212,10 @@ class EmailReplyGenerator:
         # Determine active provider
         prov = get_ai_provider(provider_name) if provider_name else self.provider
 
-        # Check fallback policy: allow fallback ONLY during test suite runs unless explicitly enabled
+        # Check fallback policy: allow graceful fallback when key is not configured or during testing
         if allow_fallback is None:
             is_test_env = 'test' in sys.argv or getattr(settings, 'TESTING', False)
-            allow_fallback = is_test_env
+            allow_fallback = is_test_env or getattr(settings, 'ALLOW_AI_FALLBACK', True)
 
         # Build comprehensive email context (including clean body, thread history, attachments, recipient)
         context_payload = build_email_reply_context(
